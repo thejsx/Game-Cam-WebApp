@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start /b python:*)",
+      "Bash(python test:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "WebFetch(domain:docs.anthropic.com)"
+    ],
+    "deny": []
+  }
+}

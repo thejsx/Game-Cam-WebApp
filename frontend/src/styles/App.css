@@ -1,0 +1,96 @@
+/* App.css */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 18px;
+  color: #666;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 500;
+}
+
+.resize-handle {
+  height: 4px;
+  background: linear-gradient(to bottom, #ddd, #bbb);
+  cursor: ns-resize;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.resize-handle:hover {
+  background: linear-gradient(to bottom, #bbb, #999);
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  background: #888;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.resize-handle:hover::before {
+  opacity: 1;
+}
+
+.bottom-panel-wrapper {
+  overflow: auto;
+  min-height: 200px;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .app-main {
+    min-height: 40vh;
+  }
+  
+  .resize-handle {
+    display: none;
+  }
+  
+  .bottom-panel-wrapper {
+    height: auto !important;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}

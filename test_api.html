@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>Game Cam API Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="output"></pre>
+    
+    <script>
+        async function testAPI() {
+            const output = document.getElementById('output');
+            try {
+                output.textContent = 'Fetching data...';
+                const response = await fetch('http://localhost:10000/api/labels');
+                const data = await response.json();
+                
+                let report = 'API Response:\n';
+                report += `Sites: ${data.sites ? Object.keys(data.sites).length : 0}\n`;
+                report += `Videos: ${data.video_labels ? Object.keys(data.video_labels).length : 0}\n`;
+                
+                if (data.sorted_videos) {
+                    report += '\nSorted Videos:\n';
+                    report += `  Animals: ${data.sorted_videos.animal_videos ? Object.keys(data.sorted_videos.animal_videos).join(', ') : 'none'}\n`;
+                    report += `  Actions: ${data.sorted_videos.actions ? Object.keys(data.sorted_videos.actions).join(', ') : 'none'}\n`;
+                    report += `  Additional: ${data.sorted_videos.additional_labels ? Object.keys(data.sorted_videos.additional_labels).join(', ') : 'none'}\n`;
+                }
+                
+                if (data.reverse_subset) {
+                    report += '\nReverse Subset:\n';
+                    report += `  Cam Sites: ${data.reverse_subset['Cam Sites'] ? data.reverse_subset['Cam Sites'].length : 0}\n`;
+                    report += `  Animals: ${data.reverse_subset['Animals'] ? data.reverse_subset['Animals'].join(', ') : 'none'}\n`;
+                    report += `  Actions: ${data.reverse_subset['Actions'] ? data.reverse_subset['Actions'].join(', ') : 'none'}\n`;
+                    report += `  Addt'l Labels: ${data.reverse_subset["Addt'l Labels"] ? data.reverse_subset["Addt'l Labels"].join(', ') : 'none'}\n`;
+                }
+                
+                output.textContent = report;
+                console.log('Full data:', data);
+            } catch (e) {
+                output.textContent = 'Error: ' + e.message + '\n\nMake sure the backend server is running on port 10000';
+            }
+        }
+    </script>
+</body>
+</html>

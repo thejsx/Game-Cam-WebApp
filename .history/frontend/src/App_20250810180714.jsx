@@ -1,0 +1,123 @@
+// frontend/src/App.jsx
+import { useEffect, useState, useCallback } from "react";
+import { fetchLabels } from "./api";
+import MapPane from "./components/MapPane";
+import BottomPanel from "./components/BottomPanel";
+import "./styles/App.css";
+import useGlobalStore from "../GlobalStore";
+
+export default function App() {
+  const selectedSettings   = useGlobalStore(s => s.selectedSettings);
+  const setSelectedSettings= useGlobalStore(s => s.setSelectedSettings);
+  const updateFunction     = useGlobalStore(s => s.updateFunction);
+  const setVideos          = useGlobalStore(s => s.setVideos);
+  const setReverseSettings = useGlobalStore(s => s.setReverseSettings);
+  const setSelectedVideos  = useGlobalStore(s => s.setSelectedVideos);
+  const [allItems, setAllItems] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [sites, setSites] = useState({});
+
+  // Initialize all entries and default to all selected once at start
+  useEffect(() => {
+    const initializeData = async () => {
+      console.log("Fetching initial labels...");
+      const d = await fetchLabels({});
+      console.log("Fetched labels:", d);
+      setSelectedSettings({
+        sites: Object.keys(d.sites) || [],
+        animals: d.animals || [],
+        actions: d.actions || [],
+        add_labels: d.add_labels || [],
+        start: d.start || null,
+        end: d.end || null,
+        restricted: d.restricted !== undefined ? d.restricted : true
+      });
+      setAllItems({
+        sites: Object.keys(d.sites) || [],
+        animals: d.animals || [],
+        actions: d.actions || [],
+        add_labels: d.add_labels || [],
+        start: d.start,
+        end: d.end
+      });
+      setVideos(d.video_labels || {});
+
+      setReverseSettings({
+        sites: Object.keys(d.sites) || [],
+        animals: d.animals || [],
+        actions: d.actions || [],
+        add_labels: d.add_labels || []
+      });
+
+      setSites(d.sites || {});
+
+    }
+    initializeData();
+
+    }, []);
+
+  // update videos and reverse settings whenever any selected settings change
+  useEffect(() => {
+    isLoading ? (Object.keys(selectedSettings).length > 0 ? setIsLoading(false) : null) : updateFunction();
+  }, [selectedSettings]);
+
+  // Site function for the MapPane to communicate cam site toggles to global state
+  const onSiteClick = useCallback((name) => {
+    const { selectedSettings } = useGlobalStore.getState();
+    const s = selectedSettings.sites || [];
+    const next = s.includes(name) ? s.filter(x => x !== name) : [...s, name];
+    setSelectedSettings({ sites: next });
+  }, [setSelectedSettings]);
+
+  // General function to update selected settings in BottomPanel
+  const updateSelected = (key, values) => {
+    setSelectedSettings({ [key]: values });
+  };
+
+  // Keystroke listener to toggle restricted mode (ctrl + shift + r)
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.ctrlKey && event.shiftKey && event.key === "r") {
+        event.preventDefault();
+        // Toggle restricted mode
+        updateSelected('restricted', !selectedSettings.restricted);
+        console.log("Restricted mode toggled:", !selectedSettings.restricted);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Function to open the video player with selected videos
+  const onOpenPlayer = useCallback((paths) => {
+    // paths are a list of video IDs, update global state with object of paths: values
+    const { videos } = useGlobalStore.getState();
+    const selectedVideos = Object.fromEntries(Object.entries(videos).filter(([vid]) => paths.includes(vid)));
+    console.log("Opening player with selected videos:", selectedVideos);
+    setSelectedVideos(selectedVideos);
+
+    // Use the full URL with the dev server port for proper routing
+    const playerUrl = window.location.origin + "/player";
+    window.open(playerUrl, "_blank");
+  }, []);
+
+  const isReady = !isLoading && Object.keys(allItems).length > 0 && Object.keys(sites).length > 0;
+  return (
+    isReady ? (
+      <div className="app-container">
+        <div className="app-main">
+          <MapPane sites={sites} selectedSites={selectedSettings.sites} onSiteClick={onSiteClick} />
+        </div>
+
+        <BottomPanel
+          allItems={allItems}
+          updateSelected={updateSelected}
+          onOpenPlayer={onOpenPlayer}
+        />
+      </div>
+    ) :
+    ( <div className="loading-message">Loading data...</div> )
+  );
+}
