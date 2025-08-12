@@ -1,6 +1,7 @@
 // frontend/src/App.jsx
 import { useEffect, useState, useCallback, useRef } from "react";
 import { fetchLabels } from "./api";
+import { sortVideoLabelsByDate } from "./filterHelpers";
 import MapPane from "./components/MapPane";
 import BottomPanel from "./components/BottomPanel";
 import "./styles/App.css";
@@ -15,6 +16,7 @@ export default function App() {
   const updateFunction     = useGlobalStore(s => s.updateFunction);
   const setVideos          = useGlobalStore(s => s.setVideos);
   const setReverseSettings = useGlobalStore(s => s.setReverseSettings);
+  const setAllVideoLabels  = useGlobalStore(s => s.setAllVideoLabels);
   const [allItems, setAllItems] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [sites, setSites] = useState({});
@@ -27,6 +29,11 @@ export default function App() {
       console.log("Fetching initial labels...");
       const d = await fetchLabels({});
       console.log("Fetched labels:", d);
+      
+      // Store ALL video metadata (sorted by date)
+      const sortedLabels = sortVideoLabelsByDate(d.video_labels || {});
+      setAllVideoLabels(sortedLabels);
+      
       setSelectedSettings({
         sites: Object.keys(d.sites) || [],
         animals: d.animals || [],
@@ -44,7 +51,7 @@ export default function App() {
         start: d.start,
         end: d.end
       });
-      setVideos(d.video_labels || {});
+      setVideos(sortedLabels);
 
       setReverseSettings({
         sites: Object.keys(d.sites) || [],
