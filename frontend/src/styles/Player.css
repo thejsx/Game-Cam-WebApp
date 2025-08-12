@@ -76,6 +76,166 @@
   flex-wrap: wrap;
 }
 
+/* Mobile layout adjustments */
+@media (max-width: 768px) {
+  .player-container {
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .player-main {
+    margin-right: 0 !important;
+    padding: 5px;
+    height: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .player-video {
+    height: 40vh;
+    max-height: 40vh;
+  }
+
+  .player-controls {
+    padding: 5px;
+    margin-top: 5px;
+  }
+
+  .control-button {
+    padding: 6px 10px;
+    font-size: 12px;
+    margin: 2px;
+  }
+
+  .info-section {
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 5px;
+    align-items: flex-start;
+  }
+
+  .player-details {
+    flex: 1;
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .player-details h3 {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+
+  .video-details {
+    font-size: 11px;
+  }
+
+  .keyboard-shortcuts {
+    display: none; /* Hide keyboard shortcuts on mobile */
+  }
+
+  .playback-options {
+    flex: 0 0 auto;
+    padding: 8px;
+    min-width: fit-content;
+  }
+
+  .playback-options h4 {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+
+  .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .radio-option {
+    font-size: 12px;
+  }
+
+  /* Queue at bottom */
+  .queue-sidebar {
+    position: static;
+    width: 100% !important;
+    height: 250px;
+    min-height: 250px;
+    border-top: 2px solid #ddd;
+    border-left: none;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 10px;
+    background-color: #f9f9f9;
+  }
+
+  .queue-sidebar.collapsed {
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    border-top: none;
+    overflow: hidden;
+  }
+
+  .queue-divider {
+    display: none; /* No dragging on mobile */
+  }
+
+  .queue-toggle {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    z-index: 1000;
+    transform: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #2196f3;
+    color: white;
+    font-size: 18px;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .queue-toggle:hover {
+    background: #1976d2;
+  }
+
+  .queue-item {
+    padding: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+  }
+
+  .queue-thumbnail {
+    width: 80px;
+    height: 45px;
+    margin-right: 10px;
+  }
+
+  .queue-info {
+    font-size: 12px;
+    flex: 1;
+  }
+
+  .queue-title {
+    font-size: 16px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .seek-selector {
+    margin: 4px;
+  }
+
+  .seek-selector label {
+    font-size: 12px;
+  }
+}
+
 @media (max-width: 900px) {
   .info-section {
     flex-direction: column;

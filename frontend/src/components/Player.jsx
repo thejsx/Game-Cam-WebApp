@@ -14,8 +14,16 @@ export default function Player() {
   const [autoplayNext, setAutoplayNext] = useState(true);
   const [queueWidth, setQueueWidth] = useState(300);
   const [queueCollapsed, setQueueCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const videoRef = useRef(null);
   const isDragging = useRef(false);
+  
+  // Detect mobile/desktop
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const raw = localStorage.getItem("selectedVideos");
@@ -315,9 +323,9 @@ export default function Player() {
         className="queue-toggle"
         onClick={() => setQueueCollapsed(!queueCollapsed)}
         title={queueCollapsed ? "Expand Queue" : "Collapse Queue"}
-        style={{ right: queueCollapsed ? '0' : `${queueWidth - 30}px` }}
+        style={{ right: isMobile ? '10px' : (queueCollapsed ? '0' : `${queueWidth - 30}px`) }}
       >
-        {queueCollapsed ? '◀' : '▶'}
+        {isMobile ? (queueCollapsed ? '▲' : '▼') : (queueCollapsed ? '◀' : '▶')}
       </button>
 
       {/* YouTube-style right sidebar queue */}

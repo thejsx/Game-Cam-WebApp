@@ -74,14 +74,6 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
     updateSelected(key, newSelected);
   };
 
-  const handleClearEmpty = (key) => {
-    const availableItems = reverseSettings[key] || [];
-    const currentSelected = selectedSettings[key] || [];
-    // Keep only selected items that are also available (in reverse settings)
-    const newSelected = currentSelected.filter(item => availableItems.includes(item));
-    updateSelected(key, newSelected);
-  };
-
   const resetDateRange = () => {
     updateSelected('start', defaultDateRange.start);
     updateSelected('end', defaultDateRange.end);
@@ -95,39 +87,28 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
     });
   }, []);
 
-  // console.log("BottomPanel render - video count:", videos ? Object.keys(videos).length : 0);
-  // console.log('Reverse settings:', reverseSettings);
+  console.log("BottomPanel render - video count:", videos ? Object.keys(videos).length : 0);
+  console.log('Reverse settings:', reverseSettings);
   return (
     <div className="bottom-panel">
       {Object.entries(categories).map(([k, title]) => (
         <div key={k} className={`filter-list ${k}`}>
           <div className="filter-header">
             <div className="filter-title">{title}</div>
-            <div className="filter-buttons">
-              <button 
-                className="filter-button select-all-none"
-                onClick={() => handleSelectAllNone(k)}
-                title={selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
-              >
-                {selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
-              </button>
-              {k === 'sites' && (
-                <button 
-                  className="filter-button clear-empty"
-                  onClick={() => handleClearEmpty(k)}
-                  title="Unselect sites that have no videos in the current filter"
-                >
-                  Clear Empty
-                </button>
-              )}
-            </div>
+            <button 
+              className="filter-button select-all-none"
+              onClick={() => handleSelectAllNone(k)}
+              title={selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
+            >
+              {selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
+            </button>
           </div>
           <div 
             className="filter-items"
             style={isMobile ? { height: `${sectionHeights[k]}px` } : {}}
           >
             {allItems[k].map(entry =>  {
-              // console.log('Greying check:', k, entry, reverseSettings[k]);
+              console.log('Greying check:', k, entry, reverseSettings[k]);
               return (
               <div key={`${k}-${entry}`} className={`filter-item ${!reverseSettings[k].includes(entry) ? 'unavailable' : ''}`}>
                 <label>

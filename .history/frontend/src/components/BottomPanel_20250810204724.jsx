@@ -74,14 +74,6 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
     updateSelected(key, newSelected);
   };
 
-  const handleClearEmpty = (key) => {
-    const availableItems = reverseSettings[key] || [];
-    const currentSelected = selectedSettings[key] || [];
-    // Keep only selected items that are also available (in reverse settings)
-    const newSelected = currentSelected.filter(item => availableItems.includes(item));
-    updateSelected(key, newSelected);
-  };
-
   const resetDateRange = () => {
     updateSelected('start', defaultDateRange.start);
     updateSelected('end', defaultDateRange.end);
@@ -103,24 +95,13 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
         <div key={k} className={`filter-list ${k}`}>
           <div className="filter-header">
             <div className="filter-title">{title}</div>
-            <div className="filter-buttons">
-              <button 
-                className="filter-button select-all-none"
-                onClick={() => handleSelectAllNone(k)}
-                title={selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
-              >
-                {selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
-              </button>
-              {k === 'sites' && (
-                <button 
-                  className="filter-button clear-empty"
-                  onClick={() => handleClearEmpty(k)}
-                  title="Unselect sites that have no videos in the current filter"
-                >
-                  Clear Empty
-                </button>
-              )}
-            </div>
+            <button 
+              className="filter-button select-all-none"
+              onClick={() => handleSelectAllNone(k)}
+              title={selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
+            >
+              {selectedSettings[k].length < allItems[k].length ? "Select All" : "Select None"}
+            </button>
           </div>
           <div 
             className="filter-items"

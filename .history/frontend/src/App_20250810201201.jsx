@@ -7,7 +7,7 @@ import "./styles/App.css";
 import useGlobalStore from "../GlobalStore";
 
 // Global configuration
-const MAX_VIDEOS_LIMIT = 200; // Configurable limit for video playback
+const MAX_VIDEOS_LIMIT = 500; // Configurable limit for video playback
 
 export default function App() {
   const selectedSettings   = useGlobalStore(s => s.selectedSettings);

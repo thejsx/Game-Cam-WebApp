@@ -46,20 +46,16 @@
   .bottom-panel {
     flex-direction: column;
     overflow-y: auto;
-    overflow-x: auto;
+    overflow-x: hidden;
     gap: 8px;
-    padding: 8px 20px 8px 8px; /* Extra padding on right for scroll */
+    padding: 8px;
     flex-wrap: nowrap;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
   .vertical-resize-handle {
-    display: block !important;
-    width: 100%;
-    height: 6px;
+    display: block;
     background: linear-gradient(to bottom, #999, #777);
-    cursor: ns-resize;
-    margin: 4px 0;
   }
   
   .vertical-resize-handle:hover {
@@ -70,8 +66,9 @@
   .videos-section,
   .date-range {
     width: fit-content;
-    min-width: 200px;
-    max-width: calc(100vw - 40px); /* Account for padding and scroll */
+    min-width: fit-content;
+    max-width: 100%;
+    align-self: stretch;
   }
 
   /* Heights are controlled by JavaScript state in mobile mode */
@@ -120,18 +117,6 @@
   border-bottom: 1px solid #e0e0e0;
 }
 
-.filter-buttons {
-  display: flex;
-  gap: 4px;
-  flex-direction: column;
-}
-
-@media (min-width: 1000px) {
-  .filter-buttons {
-    flex-direction: row;
-  }
-}
-
 .filter-title {
   font-weight: 600;
   font-size: 14px;
@@ -165,7 +150,7 @@
 }
 
 .filter-item.unavailable {
-  opacity: 0.6;
+  opacity: 0.2;
   color: #999;
 }
 
@@ -206,22 +191,7 @@
 }
 
 .select-all-none {
-  min-width: 70px;
-  font-size: 10px;
-}
-
-.clear-empty {
-  min-width: 70px;
-  font-size: 10px;
-  background: linear-gradient(to bottom, #fff8e1, #ffecb3);
-  border-color: #ffb74d;
-  color: #e65100;
-}
-
-.clear-empty:hover {
-  background: linear-gradient(to bottom, #ffecb3, #ffe082);
-  border-color: #ff9800;
-  color: #d84315;
+  min-width: 35px;
 }
 
 .reset-button {
@@ -237,12 +207,11 @@
 }
 
 .date-range {
-  min-width: fit-content;
-  max-width: 160px;
-  width: fit-content;
+  min-width: 140px;
+  max-width: 180px;
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
   height: auto;
   max-height: 100%;
 }
@@ -280,7 +249,7 @@
 }
 
 .date-input input[type="date"] {
-  width: 100px;
+  width: 110px;
   padding: 3px 4px;
   border: 1px solid #ddd;
   border-radius: 4px;
