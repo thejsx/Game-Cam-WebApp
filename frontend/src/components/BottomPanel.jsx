@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useMemo, useCallback } from "react";
 import "../styles/BottomPanel.css";
 import useGlobalStore from "../../GlobalStore";
+import VirtualVideoList from "./VirtualVideoList";
 
 // Mobile detection hook
 const useIsMobile = () => {
@@ -15,7 +16,46 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) {
+// Memoized filter item component
+const FilterItem = memo(({ category, entry, isChecked, isUnavailable, onChange }) => (
+    <div className={`filter-item ${isUnavailable ? 'unavailable' : ''}`}>
+        <label>
+            <input 
+                type="checkbox" 
+                checked={isChecked}
+                onChange={onChange}
+            /> 
+            {entry} 
+        </label>
+    </div>
+));
+
+// Memoized video item component
+const VideoItem = memo(({ vid, info, index, isChecked, onToggle, onDoubleClick }) => {
+    const date = info ? info.time.split('T')[0] : '';
+    const displayName = `${index + 1}. ${date}`;
+    
+    return (
+        <div className="video-item">
+            <label>
+                <input 
+                    type="checkbox" 
+                    checked={isChecked}
+                    onChange={onToggle}
+                />
+                <span 
+                    className="video-item-name"
+                    onDoubleClick={onDoubleClick}
+                    title={vid}
+                >
+                    {displayName}
+                </span>
+            </label>
+        </div>
+    );
+});
+
+function BottomPanel({ allItems, updateSelected, onOpenPlayer }) {
   const selectedSettings = useGlobalStore(s => s.selectedSettings);
   const videos           = useGlobalStore(s => s.videos);
   const reverseSettings  = useGlobalStore(s => s.reverseSettings);
@@ -29,63 +69,78 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
   };
   const [checkedVideos, setCheckedVideos] = useState([]);
   const [defaultDateRange, setDefaultDateRange] = useState({ start: null, end: null });
-  const [sectionHeights, setSectionHeights] = useState({
-    sites: 80,
-    animals: 80,
-    actions: 80,
-    add_labels: 80,
-    videos: 120
-  });
+  const [sectionHeights, setSectionHeights] = useState(() => ({
+    sites: window.innerWidth <= 768 ? 130 : 200,
+    animals: window.innerWidth <= 768 ? 130 : 200,
+    actions: window.innerWidth <= 768 ? 130 : 200,
+    add_labels: window.innerWidth <= 768 ? 130 : 200,
+    videos: window.innerWidth <= 768 ? 200 : 250
+  }));
 
-  // Handle vertical drag for mobile resizing
+  // Handle vertical drag for mobile resizing (supports both mouse and touch)
   const handleVerticalDragStart = (section, e) => {
     e.preventDefault();
-    const startY = e.clientY;
+    e.stopPropagation();
+    
+    const isTouch = e.type.includes('touch');
+    const startY = isTouch ? e.touches[0].clientY : e.clientY;
     const startHeight = sectionHeights[section];
     
-    const handleMouseMove = (moveEvent) => {
-      const deltaY = moveEvent.clientY - startY;
-      const newHeight = Math.max(50, Math.min(500, startHeight + deltaY));
+    const handleMove = (moveEvent) => {
+      moveEvent.preventDefault();
+      const currentY = moveEvent.touches ? moveEvent.touches[0].clientY : moveEvent.clientY;
+      const deltaY = currentY - startY;
+      const newHeight = Math.max(80, Math.min(400, startHeight + deltaY));
       setSectionHeights(prev => ({ ...prev, [section]: newHeight }));
     };
     
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handleEnd = () => {
+      if (isTouch) {
+        document.removeEventListener('touchmove', handleMove, { passive: false });
+        document.removeEventListener('touchend', handleEnd);
+      } else {
+        document.removeEventListener('mousemove', handleMove);
+        document.removeEventListener('mouseup', handleEnd);
+      }
     };
     
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    if (isTouch) {
+      document.addEventListener('touchmove', handleMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+    } else {
+      document.addEventListener('mousemove', handleMove);
+      document.addEventListener('mouseup', handleEnd);
+    }
   };
  
-  const handleChange = (key, entry) => {
+  const handleChange = useCallback((key, entry) => {
     const newSelected = selectedSettings[key].includes(entry)
       ? selectedSettings[key].filter(e => e !== entry)
       : [...selectedSettings[key], entry];
     updateSelected(key, newSelected);
-  };
+  }, [selectedSettings, updateSelected]);
 
-  const handleSelectAllNone = (key) => {
+  const handleSelectAllNone = useCallback((key) => {
     const currentSelected = selectedSettings[key] || [];
     const allOptions = allItems[key] || [];
     
     // If not all are selected, select all. Otherwise, select none.
     const newSelected = currentSelected.length < allOptions.length ? [...allOptions] : [];
     updateSelected(key, newSelected);
-  };
+  }, [selectedSettings, allItems, updateSelected]);
 
-  const handleClearEmpty = (key) => {
+  const handleClearEmpty = useCallback((key) => {
     const availableItems = reverseSettings[key] || [];
     const currentSelected = selectedSettings[key] || [];
     // Keep only selected items that are also available (in reverse settings)
     const newSelected = currentSelected.filter(item => availableItems.includes(item));
     updateSelected(key, newSelected);
-  };
+  }, [reverseSettings, selectedSettings, updateSelected]);
 
-  const resetDateRange = () => {
+  const resetDateRange = useCallback(() => {
     updateSelected('start', defaultDateRange.start);
     updateSelected('end', defaultDateRange.end);
-  };
+  }, [defaultDateRange, updateSelected]);
 
   // Save default date range on mount
   useEffect(() => {
@@ -126,24 +181,21 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
             className="filter-items"
             style={isMobile ? { height: `${sectionHeights[k]}px` } : {}}
           >
-            {allItems[k].map(entry =>  {
-              // console.log('Greying check:', k, entry, reverseSettings[k]);
-              return (
-              <div key={`${k}-${entry}`} className={`filter-item ${!reverseSettings[k].includes(entry) ? 'unavailable' : ''}`}>
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedSettings[k].includes(entry)}
-                    onChange={() => handleChange(k, entry)}
-                  /> 
-                  {entry} 
-                </label>
-              </div>  );
-            })}
+            {allItems[k].map(entry => (
+              <FilterItem
+                key={`${k}-${entry}`}
+                category={k}
+                entry={entry}
+                isChecked={selectedSettings[k].includes(entry)}
+                isUnavailable={!reverseSettings[k].includes(entry)}
+                onChange={() => handleChange(k, entry)}
+              />
+            ))}
           </div>
           <div 
-            className="vertical-resize-handle"
+            className="vertical-resize-handle mobile-only"
             onMouseDown={(e) => handleVerticalDragStart(k, e)}
+            onTouchStart={(e) => handleVerticalDragStart(k, e)}
           />
         </div>
       ))}
@@ -193,40 +245,18 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
           className="videos-list"
           style={isMobile ? { height: `${sectionHeights.videos}px` } : {}}
         >
-          {
-            !videos || Object.keys(videos).length === 0 ? <p>No videos available</p> : 
-            Object.entries(videos).map(([vid, info],index) => {
-              const date = info ? info.time.split('T')[0] : '';
-              const displayName = `${index+1}. ${date}`;
-              return (
-              <div key={vid} className="video-item">
-                <label>
-                  <input 
-                    type="checkbox" 
-                    checked={checkedVideos.includes(vid)}
-                    onChange={() => {
-                      if (checkedVideos.includes(vid)) {
-                        setCheckedVideos(checkedVideos.filter(v => v !== vid));
-                      } else {
-                        setCheckedVideos([...checkedVideos, vid]);
-                      }
-                    }}
-                  />
-                  <span 
-                    className="video-item-name"
-                    onDoubleClick={() => onOpenPlayer([vid])}
-                    title={vid}
-                  >
-                    {displayName}
-                  </span>
-                </label>
-              </div>
-            );
-          })}
+          <VirtualVideoList
+            videos={videos || {}}
+            checkedVideos={checkedVideos}
+            setCheckedVideos={setCheckedVideos}
+            onOpenPlayer={onOpenPlayer}
+            height={isMobile ? sectionHeights.videos : undefined}
+          />
         </div>
         <div 
-          className="vertical-resize-handle"
+          className="vertical-resize-handle mobile-only"
           onMouseDown={(e) => handleVerticalDragStart('videos', e)}
+          onTouchStart={(e) => handleVerticalDragStart('videos', e)}
         />
         <div className="video-actions">
           {videos && Object.keys(videos).length > 0 && (
@@ -242,3 +272,5 @@ export default function BottomPanel({ allItems, updateSelected, onOpenPlayer }) 
     </div>
   );
 }
+
+export default memo(BottomPanel);

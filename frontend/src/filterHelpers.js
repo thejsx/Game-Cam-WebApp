@@ -1,4 +1,4 @@
-// 1:1 conversion of Python filtering logic to JavaScript
+// Optimized filtering logic with better performance
 
 export function parseDt(x) {
     if (x instanceof Date) return x;
@@ -15,67 +15,79 @@ export function sortVideoLabelsByDate(videoLabels) {
     return Object.fromEntries(items);
 }
 
+// Optimized with Set lookups instead of array.includes()
 export function resortAllData(videoLabels, sites, animals, actions, addLabels, dateLabels, restricted) {
     const videos = [];
     const startDate = parseDt(dateLabels[0]);
     const endDate = parseDt(dateLabels[1]);
     
+    // Convert arrays to Sets for O(1) lookup instead of O(n)
+    const sitesSet = new Set(sites);
+    const animalsSet = new Set(animals);
+    const actionsSet = new Set(actions);
+    const addLabelsSet = new Set(addLabels);
+    
+    // Pre-check for early exits
+    if (sites.length === 0 || animals.length === 0 || actions.length === 0 || addLabels.length === 0) {
+        return videos;
+    }
+    
     for (const [video, labels] of Object.entries(videoLabels)) {
         // Restricted check
         if (restricted && labels.restricted) continue;
         
-        // Sites check - empty filter means no videos should match
-        if (!sites.includes(labels.site)) continue;
+        // Sites check
+        if (!sitesSet.has(labels.site)) continue;
         
-        // Animals check - empty filter means no videos should match
-        if (animals.length === 0) continue;
-        let okAnimals = false;
+        // Animals check - optimized with Set
         const videoAnimals = labels.animals || [];
-        for (const a of animals) {
-            if (videoAnimals.includes(a)) {
-                okAnimals = true;
-                break;
-            }
-            // Handle 'none' case - match videos with empty animals list
-            if (a === 'none' && videoAnimals.length === 0) {
-                okAnimals = true;
-                break;
+        let okAnimals = false;
+        
+        if (animalsSet.has('none') && videoAnimals.length === 0) {
+            okAnimals = true;
+        } else {
+            for (const a of videoAnimals) {
+                if (animalsSet.has(a)) {
+                    okAnimals = true;
+                    break;
+                }
             }
         }
         if (!okAnimals) continue;
         
-        // Actions check - empty filter means no videos should match
-        if (actions.length === 0) continue;
-        let okActions = false;
+        // Actions check - optimized with Set
         const videoActions = labels.actions || [];
-        for (const act of actions) {
-            if (videoActions.includes(act)) {
-                okActions = true;
-                break;
-            }
-            if (act === 'none' && videoActions.length === 0) {
-                okActions = true;
-                break;
+        let okActions = false;
+        
+        if (actionsSet.has('none') && videoActions.length === 0) {
+            okActions = true;
+        } else {
+            for (const act of videoActions) {
+                if (actionsSet.has(act)) {
+                    okActions = true;
+                    break;
+                }
             }
         }
         if (!okActions) continue;
         
-        // Additional labels check - empty filter means no videos should match
-        if (addLabels.length === 0) continue;
-        let okAdd = false;
+        // Additional labels check - optimized with Set
         const videoAddLabels = labels.additional_labels || [];
-        for (const lbl of addLabels) {
-            if (videoAddLabels.includes(lbl)) {
-                okAdd = true;
-                break;
-            }
-            if (lbl === 'none' && videoAddLabels.length === 0) {
-                okAdd = true;
-                break;
+        let okAdd = false;
+        
+        if (addLabelsSet.has('none') && videoAddLabels.length === 0) {
+            okAdd = true;
+        } else {
+            for (const lbl of videoAddLabels) {
+                if (addLabelsSet.has(lbl)) {
+                    okAdd = true;
+                    break;
+                }
             }
         }
         if (!okAdd) continue;
         
+        // Date check
         const vdt = parseDt(labels.time);
         if (!(vdt >= startDate && vdt <= endDate)) continue;
         
@@ -85,50 +97,47 @@ export function resortAllData(videoLabels, sites, animals, actions, addLabels, d
     return videos;
 }
 
+// Optimized reverse subset with Set for deduplication
 export function reverseSubset(videos, videoLabels) {
-    const sites = [];
-    const animals = [];
-    const actions = [];
-    const addLabels = [];
+    const sites = new Set();
+    const animals = new Set();
+    const actions = new Set();
+    const addLabels = new Set();
     
     for (const v of videos) {
         const lbl = videoLabels[v];
         
-        const s = lbl.site;
-        if (s && !sites.includes(s)) sites.push(s);
+        if (lbl.site) sites.add(lbl.site);
         
         // Handle animals
         const anims = lbl.animals || [];
-        for (const a of anims) {
-            if (!animals.includes(a)) animals.push(a);
-        }
-        if (anims.length === 0 && !animals.includes('none')) {
-            animals.push('none');
+        if (anims.length === 0) {
+            animals.add('none');
+        } else {
+            anims.forEach(a => animals.add(a));
         }
         
         // Handle actions
         const acts = lbl.actions || [];
-        for (const ac of acts) {
-            if (!actions.includes(ac)) actions.push(ac);
-        }
-        if (acts.length === 0 && !actions.includes('none')) {
-            actions.push('none');
+        if (acts.length === 0) {
+            actions.add('none');
+        } else {
+            acts.forEach(ac => actions.add(ac));
         }
         
         // Handle additional labels
         const adds = lbl.additional_labels || [];
-        for (const ad of adds) {
-            if (!addLabels.includes(ad)) addLabels.push(ad);
-        }
-        if (adds.length === 0 && !addLabels.includes('none')) {
-            addLabels.push('none');
+        if (adds.length === 0) {
+            addLabels.add('none');
+        } else {
+            adds.forEach(ad => addLabels.add(ad));
         }
     }
     
     return {
-        sites,
-        animals,
-        actions,
-        add_labels: addLabels
+        sites: Array.from(sites),
+        animals: Array.from(animals),
+        actions: Array.from(actions),
+        add_labels: Array.from(addLabels)
     };
 }
