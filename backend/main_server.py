@@ -4,25 +4,48 @@ from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from sorting import resort_all_data, reverse_subset, sort_video_labels_by_date
+from sorting import resort_all_data, reverse_subset, convert_video_labels, sort_video_labels_by_date
+from pathlib import Path
+import platform
+from dotenv import load_dotenv
 
-JSON_DIR = r"C:\Users\jrsch\Documents\Visual Studio Code\Deer Score Prediction\yolov5\GameCamFiles\GameCamClassifierJSONs"
+load_dotenv()
+
 DEFAULT_JSON_BASENAME = "GameCamClassifiers.json"
 APP_PORT = 10000
 
+system = platform.system().lower()
 default_restricted = True
-
 data = {}
 
+def get_json_path():
+    env = os.getenv('JSON_DIR')
+    if env:
+        p = env.replace("~", str(Path.home()))
+    else:
+        if system == "windows":
+            p = r"C:\Users\jrsch\Documents\Visual Studio Code\Deer Score Prediction\yolov5\GameCamFiles\GameCamClassifierJSONs"
+        elif system == "linux":
+            p = "/mnt/D"
+
+    path = os.path.join(p, DEFAULT_JSON_BASENAME)
+    return path, p
+
 def load_data_into_memory():
-    """Reads and processes the JSON data, storing it in the global data_store."""
+    """Reads and processes the JSON data, storing it in the global data_store. Also converts paths as needed"""
     print("Loading and sorting label data from disk...")
     global data
-    path = os.path.join(JSON_DIR, DEFAULT_JSON_BASENAME)
+    path, root = get_json_path()
+    print(f"Using JSON path: {path}")
     with open(path, 'r') as f:
         init_data = json.load(f)
-    # Store the sorted data globally
-    data = sort_video_labels_by_date(init_data)
+
+    if system == 'linux':
+        converted_data = convert_video_labels(init_data, root)
+    else:
+        converted_data = init_data
+
+    data = sort_video_labels_by_date(converted_data)
     print("Data loading complete.")
 
 # --- FastAPI event handler to run on startup ---

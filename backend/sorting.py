@@ -17,6 +17,14 @@ def sort_video_labels_by_date(data):
     data['video_labels'] = dict(items)
     return data
 
+def convert_video_labels(data, root):
+    """Convert video labels to linux format with appropriate root."""
+    video_keys = list(data['video_labels'].keys())
+    for video in video_keys:
+        new_video = root + '/' + video[video.index('Game cams'):].replace('\\', '/')
+        data['video_labels'][new_video] = data['video_labels'].pop(video)
+    return data
+
 def resort_all_data(data, sites, animals, actions, add_labels, date_labels, restricted):
     videos = []
     video_labels = data['video_labels']
