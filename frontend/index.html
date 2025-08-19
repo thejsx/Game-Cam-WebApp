@@ -2,10 +2,19 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" crossorigin />
     <title>GameCam Web</title>
-    <style>html,body,#root{height:100%;margin:0}</style>
+    <style>
+      html, body, #root { height: 100%; margin: 0; }
+      /* Prefer modern dynamic viewport units, with fallback */
+      #root { height: 100dvh; }
+      @supports not (height: 100dvh) {
+        #root { height: 100vh; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -13,5 +13,17 @@ export default defineConfig({
     },
     // This ensures all routes fallback to index.html for client-side routing
     historyApiFallback: true
+  },
+  build: {
+    // Ensure CSS is properly extracted and minified
+    cssCodeSplit: false,
+    // Ensure media queries are preserved
+    cssMinify: 'lightningcss',
+    rollupOptions: {
+      output: {
+        // Ensure CSS files are properly named
+        assetFileNames: 'assets/[name].[hash][extname]'
+      }
+    }
   }
 })

@@ -1,0 +1,84 @@
+.rm-layout {
+  display: flex;
+  flex-direction: column;
+  block-size: 100dvh;
+  min-block-size: 100vh; /* fallback */
+  inline-size: 100%;
+  overscroll-behavior: contain;
+  --top-pane: 62%;
+}
+
+.rm-top {
+  flex: 0 0 var(--top-pane);
+  min-block-size: 20dvh;
+  overflow: hidden;
+  position: relative;
+}
+
+.rm-handle {
+  flex: 0 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  cursor: row-resize;
+  user-select: none;
+  background: rgba(0, 0, 0, 0.05);
+  border-block: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.rm-grip {
+  inline-size: 64px;
+  block-size: 4px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.rm-bottom {
+  flex: 1 1 auto;
+  min-block-size: 20dvh;
+  overflow: hidden auto;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .filters-scroller {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    /* make this area scroll, so the hint scrolls away with the lists */
+    max-height: 50vh;          /* adjust if your layout needs more/less */
+    overflow: auto;
+    padding: 8px 0;
+  }
+
+  .filters-scroller .mobile-filter-hint {
+    padding: 8px 12px;
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    line-height: 1.25rem;
+    background: rgba(255, 255, 0, 0.12);
+    border: 1px dashed #aaa;
+    border-radius: 6px;
+  }
+
+  /* Make all lists share the width of the widest list (set via --filters-max-item-width) */
+  /* Each top-level list root in Filters should have [data-filter-list] */
+  .filters-scroller [data-filter-list] {
+    max-width: var(--filters-max-item-width, 100%);
+    width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* Reduce each list’s vertical footprint (roughly half typical ~40vh lists) */
+  /* If your lists have a specific inner scrollable element, target it here. */
+  .filters-scroller [data-filter-list] .list,
+  .filters-scroller [data-filter-list] .items,
+  .filters-scroller [data-filter-list] .scroll,
+  .filters-scroller [data-filter-list] ul {
+    max-height: 30vh;
+    overflow: auto;
+  }
+}

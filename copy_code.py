@@ -11,7 +11,7 @@ IGNORE_EXTS = {
     ".log", ".tmp", ".pyc", ".zip", ".tar", ".gz", ".exe",
     ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".mov", ".avi",
     # web build artifacts & maps
-    ".map"
+    ".map", ".txt"
 }
 
 def find_repo_root(start_path=None):

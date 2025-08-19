@@ -6,7 +6,10 @@
       "Bash(python:*)",
       "Bash(curl:*)",
       "Bash(npm run dev:*)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(pip install:*)",
+      "Bash(npm run build:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 
 function group(title, all, selected, onToggleAll, onToggleItem) {
   return (
-    <div className="filterGroup">
+    <div className="filterGroup" data-filter-list>
       <div className="filterHeader">
         <span>{title}</span>
         <button className="small" onClick={() => onToggleAll(title)}>
@@ -74,7 +74,7 @@ export default function Filters({ options, filters, onChange }) {
       {group('Actions', actions, filters.actions, handlers.toggleAll, handlers.toggleItem)}
       {group("Addt'l Labels", addLabels, filters.addLabels, handlers.toggleAll, handlers.toggleItem)}
 
-      <div className="dates">
+      <div className="dates" data-filter-list>
         <label>
           Start
           <input

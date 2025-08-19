@@ -13,9 +13,11 @@ Game Cam WebApp - A full-stack application for managing and viewing wildlife cam
 cd frontend
 npm install          # Install dependencies
 npm run dev          # Start development server on http://localhost:5173
-npm run build        # Production build to frontend/dist
 npm run lint         # Run ESLint
-npm run preview      # Preview production build
+
+# IMPORTANT: Never run build during development - it interferes with hot reloading
+# npm run build      # Production build (ONLY for deployment, not development)
+# npm run preview    # Preview production build (ONLY for testing production builds)
 ```
 
 ### Backend
@@ -117,3 +119,8 @@ This mode first considers the video list and compiles a list of all the unique e
 - No testing framework or test files present
 - No Docker, CI/CD, or deployment automation
 - No environment variables or .env configuration
+
+## Important Development Rules
+- **NEVER run `npm run build` or `npm run preview` during development** - these interfere with hot reloading
+- Always use `npm run dev` for development work
+- Only build for production deployment, never during development sessions

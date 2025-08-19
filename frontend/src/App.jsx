@@ -4,11 +4,30 @@ import { fetchLabels } from "./api";
 import { sortVideoLabelsByDate } from "./filterHelpers";
 import MapPane from "./components/MapPane";
 import BottomPanel from "./components/BottomPanel";
+import ResizableMobileLayout from "./components/ResizableMobileLayout";
+import Login from "./components/Login";
 import "./styles/App.css";
+import "./styles/ResizableMobileLayout.css"; // Ensure styles are imported
 import useGlobalStore from "../GlobalStore";
 
 // Global configuration
 const MAX_VIDEOS_LIMIT = 200; // Configurable limit for video playback
+
+// helper (inline)
+function useMedia(query) {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
+}
+
+// Main App component
 
 export default function App() {
   const selectedSettings   = useGlobalStore(s => s.selectedSettings);
@@ -21,14 +40,29 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [sites, setSites] = useState({});
   const [bottomPanelHeight, setBottomPanelHeight] = useState(300);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState(null);
   const isDragging = useRef(false);
+  const isMobile = useMedia('(max-width: 900px)'); // Use custom hook for media queries
+
+  // Check for existing token on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   // Initialize all entries and default to all selected once at start
   useEffect(() => {
+    if (!isAuthenticated) return;
+    
     const initializeData = async () => {
       console.log("Fetching initial labels...");
-      const d = await fetchLabels({});
+      const d = await fetchLabels({}, token);
       console.log("Fetched labels:", d);
+      console.log("Fetched sites:", d.sites);
       
       // Store ALL video metadata (sorted by date)
       const sortedLabels = sortVideoLabelsByDate(d.video_labels || {});
@@ -65,7 +99,7 @@ export default function App() {
     }
     initializeData();
 
-    }, []);
+    }, [isAuthenticated, token]);
 
   // update videos and reverse settings whenever any selected settings change
   useEffect(() => {
@@ -85,21 +119,33 @@ export default function App() {
     setSelectedSettings({ [key]: values });
   };
 
-  // Keystroke listener to toggle restricted mode (ctrl + shift + r)
+  // Keystroke listener to toggle restricted mode (ctrl + shift + q)
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.ctrlKey && event.shiftKey && event.key === "r") {
+      // Debug: Log all ctrl+shift key combinations
+      if (event.ctrlKey && event.shiftKey) {
+        console.log("Ctrl+Shift pressed with key:", event.key);
+      }
+      
+      if (event.ctrlKey && event.shiftKey && (event.key === "q" || event.key === "Q")) {
         event.preventDefault();
-        // Toggle restricted mode
-        updateSelected('restricted', !selectedSettings.restricted);
-        console.log("Restricted mode toggled:", !selectedSettings.restricted);
+        event.stopPropagation();
+        // Toggle restricted mode using the current state value
+        const currentRestricted = useGlobalStore.getState().selectedSettings.restricted;
+        const newRestricted = !currentRestricted;
+        console.log("Toggling restricted mode from", currentRestricted, "to", newRestricted);
+        setSelectedSettings({ restricted: newRestricted });
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
+    
+    console.log("Setting up keyboard listener for restricted mode toggle");
+    window.addEventListener("keydown", handleKeyDown, true);
+    
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      console.log("Removing keyboard listener");
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, []);
+  }, [setSelectedSettings]);
 
   // Function to open the video player with selected videos
   const onOpenPlayer = useCallback((paths) => {
@@ -154,24 +200,48 @@ export default function App() {
     };
   }, []);
 
+  const handleLogin = (accessToken) => {
+    setToken(accessToken);
+    setIsAuthenticated(true);
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   const isReady = !isLoading && Object.keys(allItems).length > 0 && Object.keys(sites).length > 0;
   return (
     isReady ? (
-      <div className="app-container">
-        <div className="app-main" style={{ height: `calc(100vh - ${bottomPanelHeight}px)` }}>
-          <MapPane sites={sites} selectedSites={selectedSettings.sites} onSiteClick={onSiteClick} />
-        </div>
+      isMobile ? (
+        <ResizableMobileLayout
+          top={
+            <MapPane sites={sites} selectedSites={selectedSettings.sites} onSiteClick={onSiteClick} />
+          }
+          bottom={
+            <BottomPanel
+              allItems={allItems}
+              updateSelected={updateSelected}
+              onOpenPlayer={onOpenPlayer}
+            />
+          }
+        />
+      ) : (
+        <div className="app-container">
+          <div className="app-main" style={{ height: `calc(100vh - ${bottomPanelHeight}px)` }}>
+            <MapPane sites={sites} selectedSites={selectedSettings.sites} onSiteClick={onSiteClick} />
+          </div>
 
-        <div className="resize-handle" onMouseDown={handleMouseDown} />
+          <div className="resize-handle" onMouseDown={handleMouseDown} />
 
-        <div className="bottom-panel-wrapper" style={{ height: `${bottomPanelHeight}px` }}>
-          <BottomPanel
-            allItems={allItems}
-            updateSelected={updateSelected}
-            onOpenPlayer={onOpenPlayer}
-          />
+          <div className="bottom-panel-wrapper" style={{ height: `${bottomPanelHeight}px` }}>
+            <BottomPanel
+              allItems={allItems}
+              updateSelected={updateSelected}
+              onOpenPlayer={onOpenPlayer}
+            />
+          </div>
         </div>
-      </div>
+      )
     ) :
     ( <div className="loading-message">Loading data...</div> )
   );

@@ -1,124 +1,166 @@
-// frontend/src/components/Player.jsx
-import { useEffect, useState, useRef } from "react";
-import { API } from "../api";
-import "../styles/Player.css";
-import useGlobalStore from "../../GlobalStore";
+import { useEffect, useMemo, useState, useRef } from 'react';
+import '../styles/Player.css';
+import { buildVideoUrl } from '../api.js';
+
+
+
+
 
 export default function Player() {
-  console.log("Player component initialized");
   const [queue, setQueue] = useState([]);
-  const [current, setCurrent] = useState(null);
-  const [labels, setLabels] = useState(null);
-  const [seekDuration, setSeekDuration] = useState(1); // Default 1 second
-  const [restartOnFinish, setRestartOnFinish] = useState(false);
-  const [autoplayNext, setAutoplayNext] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isQueueCollapsed, setIsQueueCollapsed] = useState(false);
   const [queueWidth, setQueueWidth] = useState(300);
-  const [queueCollapsed, setQueueCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [playbackMode, setPlaybackMode] = useState('continuous');
+  const [seekTime, setSeekTime] = useState(5);
+  // Default to false for SSR, will be updated on client-side
+  const [isMobile, setIsMobile] = useState(false);
   const videoRef = useRef(null);
-  const isDragging = useRef(false);
-  
-  // Detect mobile/desktop
+  const isDraggingRef = useRef(false);
+
+  // Check for mobile on mount - safe for SSR
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Guard against SSR where window doesn't exist
+    if (typeof window === 'undefined') return;
+    
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Load videos from localStorage (set by App.jsx)
   useEffect(() => {
-    const raw = localStorage.getItem("selectedVideos");
-    const map = JSON.parse(raw);
-    setQueue(Object.keys(map));
-    setCurrent(Object.keys(map)[0]);
-    setLabels(map);
-    console.log("Queue initialized:", map);
-    console.log("Current video set to:", current);
-    console.log("Labels set to:", labels);
-    console.log("Queue length:", queue.length);
+    // Guard against SSR where localStorage doesn't exist
+    if (typeof window === 'undefined' || !localStorage) return;
+    
+    // First check localStorage for selectedVideos
+    const selectedVideos = JSON.parse(localStorage.getItem('selectedVideos') || '{}');
+    
+    if (Object.keys(selectedVideos).length > 0) {
+      // Convert the videos object to an array format for the queue
+      const videoQueue = Object.entries(selectedVideos).map(([path, metadata]) => ({
+        path,
+        ...metadata
+      }));
+      setQueue(videoQueue);
+      // Store in sessionStorage for persistence
+      sessionStorage.setItem('gcw.queue', JSON.stringify(videoQueue));
+    } else {
+      // Fall back to sessionStorage if exists
+      const storedQueue = JSON.parse(sessionStorage.getItem('gcw.queue') || '[]');
+      if (storedQueue.length) {
+        setQueue(storedQueue);
+      }
+    }
+
+    // Load saved index
+    const savedIndex = parseInt(sessionStorage.getItem('player.currentIndex') || '0');
+    if (!isNaN(savedIndex)) {
+      setCurrentIndex(savedIndex);
+    }
   }, []);
 
-  // Skip to next video
-  const skipNext = () => {
-    const currentIndex = queue.indexOf(current);
-    if (currentIndex < queue.length - 1) {
-      setCurrent(queue[currentIndex + 1]);
-    } else if (queue.length > 0) {
-      setCurrent(queue[0]); // Cycle back to first
+  // Persist the current queue and index to sessionStorage
+  useEffect(() => {
+    // Guard against SSR where sessionStorage doesn't exist
+    if (typeof window === 'undefined' || !sessionStorage) return;
+    
+    if (queue.length) {
+      sessionStorage.setItem('gcw.queue', JSON.stringify(queue));
+    }
+    sessionStorage.setItem('player.currentIndex', String(currentIndex));
+  }, [queue, currentIndex]);
+
+  // Validate and ensure the current index is within bounds
+  useEffect(() => {
+    if (currentIndex < 0 || currentIndex >= queue.length) {
+      setCurrentIndex(0);
+    }
+  }, [queue, currentIndex]);
+
+  const currentItem = queue.length ? queue[currentIndex] : null;
+  const videoUrl = useMemo(() => (currentItem ? buildVideoUrl(currentItem.path) : ''), [currentItem]);
+
+  // Handle video selection from queue
+  const handleSelectVideo = (idx) => {
+    setCurrentIndex(idx);
+    // Guard against SSR where document doesn't exist
+    if (typeof document !== 'undefined') {
+      const el = document.querySelector(`[data-q-idx="${idx}"]`);
+      if (el) el.scrollIntoView({ block: 'nearest' });
     }
   };
 
-  // Skip to previous video
-  const skipPrevious = () => {
-    const currentIndex = queue.indexOf(current);
+  // Navigation functions
+  const handlePrevious = () => {
     if (currentIndex > 0) {
-      setCurrent(queue[currentIndex - 1]);
-    } else if (queue.length > 0) {
-      setCurrent(queue[queue.length - 1]); // Cycle to last
+      setCurrentIndex(currentIndex - 1);
     }
   };
 
-  // Seek forward/backward
-  const seekForward = () => {
+  const handleNext = () => {
+    if (currentIndex < queue.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const handleSeekBackward = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - seekTime);
+    }
+  };
+
+  const handleSeekForward = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.min(
-        videoRef.current.currentTime + seekDuration,
-        videoRef.current.duration
+        videoRef.current.duration || 0,
+        videoRef.current.currentTime + seekTime
       );
     }
   };
 
-  const seekBackward = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(
-        videoRef.current.currentTime - seekDuration,
-        0
-      );
-    }
-  };
-
-  // Auto-play next video when current ends
+  // Handle video end based on playback mode
   const handleVideoEnd = () => {
-    if (restartOnFinish) {
-      // Restart current video
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        videoRef.current.play();
-      }
-    } else if (autoplayNext) {
-      skipNext();
+    if (playbackMode === 'continuous' && currentIndex < queue.length - 1) {
+      setCurrentIndex(currentIndex + 1);
     }
+    else if (playbackMode === 'repeat') {
+      videoRef.current.currentTime = 0; // Loop current video
+    }
+    else if (playbackMode === 'single') {
+      videoRef.current.pause(); // Just pause
+    }
+
   };
 
-  // Auto-play when video changes
-  useEffect(() => {
-    if (videoRef.current && current && autoplayNext) {
-      videoRef.current.load();
-      videoRef.current.play().catch(e => console.log('Auto-play prevented:', e));
-    }
-  }, [current, autoplayNext]);
+  // Queue resizing
+  const handleDividerMouseDown = (e) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+  };
 
-  // Handle divider drag - moved before other effects to maintain hook order
   useEffect(() => {
+    // Guard against SSR where window/document don't exist
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    
     const handleMouseMove = (e) => {
-      if (!isDragging.current) return;
-      const newWidth = window.innerWidth - e.clientX;
-      setQueueWidth(Math.min(Math.max(newWidth, 0), 600));
-      // Auto-collapse if dragged to very small width
-      if (newWidth < 50) {
-        setQueueCollapsed(true);
-      } else if (queueCollapsed && newWidth > 100) {
-        setQueueCollapsed(false);
+      if (isDraggingRef.current) {
+        const newWidth = window.innerWidth - e.clientX;
+        setQueueWidth(Math.max(200, Math.min(600, newWidth)));
       }
     };
 
     const handleMouseUp = () => {
-      isDragging.current = false;
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
+      isDraggingRef.current = false;
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    if (isDraggingRef.current) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
@@ -128,25 +170,25 @@ export default function Player() {
 
   // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.target.tagName === 'INPUT') return; // Don't interfere with input fields
-      
+    const handleKeydown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          seekBackward();
+          handleSeekBackward();
           break;
         case 'ArrowRight':
           e.preventDefault();
-          seekForward();
+          handleSeekForward();
           break;
         case 'ArrowUp':
           e.preventDefault();
-          skipPrevious();
+          handlePrevious();
           break;
         case 'ArrowDown':
           e.preventDefault();
-          skipNext();
+          handleNext();
           break;
         case ' ':
           e.preventDefault();
@@ -158,222 +200,199 @@ export default function Player() {
             }
           }
           break;
+        case 'q':
+          setIsQueueCollapsed(!isQueueCollapsed);
+          break;
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [seekDuration]);
-
-  // Handle divider drag
-  const handleDividerMouseDown = (e) => {
-    isDragging.current = true;
-    document.body.style.cursor = 'ew-resize';
-    document.body.style.userSelect = 'none';
-  };
-
-  const seekDurations = [1,2,3,4,5,6,7,8,9,10];
-
-  if (!current) return <div className="no-video-message">No video selected.</div>;
-
-  const info = labels[current];
-
-  // Build detailed description
-  const getDetailedDescription = () => {
-    if (!info) return 'Loading...';
-    
-    const date = new Date(info.time).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    
-    return (
-      <div className="video-details">
-        <div><b>Date/Time:</b> {date}</div>
-        <div><b>Site:</b> {info.site}</div>
-        <div><b>Animals:</b> {info.animals.length ? info.animals.join(', ') : 'None'}</div>
-        <div><b>Actions:</b> {info.actions.length ? info.actions.join(', ') : 'None'}</div>
-        <div><b>Additional Labels:</b> {info.additional_labels.length ? info.additional_labels.join(', ') : 'None'}</div>
-        <div><b>File:</b> {current.split('\\').pop()}</div>
-      </div>
-    );
-  };
+    // Guard against SSR where window doesn't exist
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeydown);
+      return () => window.removeEventListener('keydown', handleKeydown);
+    }
+  }, [currentIndex, queue.length, isQueueCollapsed, seekTime]);
 
   return (
     <div className="player-container">
       {/* Main video area */}
-      <div className="player-main" style={{ marginRight: queueCollapsed ? '40px' : `${queueWidth}px` }}>
-        {/* Video player */}
-        <video 
-          ref={videoRef}
-          className="player-video" 
-          controls
-          autoPlay
-          onEnded={handleVideoEnd}
-          src={`${API}/api/video?path=${encodeURIComponent(current)}`} 
-        />
-        
-        {/* Control buttons */}
-        <div className="player-controls">
-          <button 
-            onClick={skipPrevious} 
-            className="control-button"
-            title="Previous video (↑)"
-          >
-            ⬅ Previous
-          </button>
-          
-          <button 
-            onClick={seekBackward} 
-            className="control-button"
-            title={`Seek backward ${seekDuration}s (←)`}
-          >
-            ⏪ -{seekDuration}s
-          </button>
-          
-          <button 
-            onClick={seekForward} 
-            className="control-button"
-            title={`Seek forward ${seekDuration}s (→)`}
-          >
-            ⏩ +{seekDuration}s
-          </button>
-          
-          <button 
-            onClick={skipNext} 
-            className="control-button"
-            title="Next video (↓)"
-          >
-            Next ➡
-          </button>
-          
-          <div className="seek-selector">
-            <label>Seek:</label>
-            <select 
-              value={seekDuration} 
-              onChange={(e) => setSeekDuration(parseInt(e.target.value))}
-            >
-              {seekDurations.map(duration => (
-                <option key={duration} value={duration}>{duration}s</option>
-              ))}
-            </select>
-          </div>
-        </div>
+      <div className="player-main" style={{ marginRight: isQueueCollapsed ? 0 : queueWidth + 'px' }}>
+        {currentItem ? (
+          <>
+            <video
+              ref={videoRef}
+              key={currentItem.path}
+              src={videoUrl}
+              controls
+              autoPlay
+              className="player-video"
+              onEnded={handleVideoEnd}
+              onError={(e) => {
+                console.error('Video failed to load:', e?.currentTarget?.src);
+              }}
+            />
 
-        {/* Info section with details and playback options */}
-        <div className="info-section">
-          {/* Video details */}
-          <div className="player-details">
-            <h3>Video Details</h3>
-            {getDetailedDescription()}
-            <div className="keyboard-shortcuts">
-              <b>Keyboard shortcuts:</b>
-              <div>← → : Seek backward/forward ({seekDuration}s) | ↑ ↓ : Previous/Next video | Space: Play/Pause</div>
-            </div>
-          </div>
-
-          {/* Playback Options */}
-          <div className="playback-options">
-            <h4>Playback</h4>
-            <div className="option-group">
-              <label className="radio-option">
-                <input 
-                  type="radio" 
-                  name="playback" 
-                  checked={restartOnFinish}
-                  onChange={() => { setRestartOnFinish(true); setAutoplayNext(false); }}
-                />
-                <span>Restart</span>
-              </label>
-              <label className="radio-option">
-                <input 
-                  type="radio" 
-                  name="playback" 
-                  checked={autoplayNext && !restartOnFinish}
-                  onChange={() => { setRestartOnFinish(false); setAutoplayNext(true); }}
-                />
-                <span>Autoplay</span>
-              </label>
-              <label className="radio-option">
-                <input 
-                  type="radio" 
-                  name="playback" 
-                  checked={!autoplayNext && !restartOnFinish}
-                  onChange={() => { setRestartOnFinish(false); setAutoplayNext(false); }}
-                />
-                <span>Stop</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Draggable divider */}
-      <div 
-        className={`queue-divider ${queueCollapsed ? 'collapsed' : ''}`} 
-        onMouseDown={handleDividerMouseDown}
-        style={{ right: queueCollapsed ? '0' : `${queueWidth}px` }}
-      />
-
-      {/* Collapse/Expand button */}
-      <button 
-        className="queue-toggle"
-        onClick={() => setQueueCollapsed(!queueCollapsed)}
-        title={queueCollapsed ? "Expand Queue" : "Collapse Queue"}
-        style={{ right: isMobile ? '10px' : (queueCollapsed ? '0' : `${queueWidth - 30}px`) }}
-      >
-        {isMobile ? (queueCollapsed ? '▲' : '▼') : (queueCollapsed ? '◀' : '▶')}
-      </button>
-
-      {/* YouTube-style right sidebar queue */}
-      <div className={`queue-sidebar ${queueCollapsed ? 'collapsed' : ''}`} style={{ width: queueCollapsed ? '0' : `${queueWidth}px` }}>
-        <h3 className="queue-title">
-          Queue ({queue.length} {queue.length === 1 ? 'video' : 'videos'})
-        </h3>
-        
-        {queue.map((v, index) => {
-          const videoInfo = labels[v];
-          const isActive = v === current;
-          
-          return (
-            <div 
-              key={v} 
-              onClick={() => setCurrent(v)} 
-              className={`queue-item ${isActive ? 'active' : ''} ${queueWidth < 250 ? 'compact' : ''}`}
-            >
-              {/* Thumbnail - hide if queue is very narrow */}
-              {queueWidth >= 150 && (
-                <div className="queue-thumbnail">
-                  <video 
-                    src={`${API}/api/video?path=${encodeURIComponent(v)}`}
-                    muted
-                  />
-                </div>
-              )}
+            {/* Player controls */}
+            <div className="player-controls">
+              <button className="control-button" onClick={handlePrevious} disabled={currentIndex === 0}>
+                Previous
+              </button>
+              <button className="control-button" onClick={handleSeekBackward}>
+                ← {seekTime}s
+              </button>
+              <button className="control-button" onClick={handleSeekForward}>
+                {seekTime}s →
+              </button>
+              <button className="control-button" onClick={handleNext} disabled={currentIndex === queue.length - 1}>
+                Next
+              </button>
               
-              {/* Video info */}
-              <div className="queue-info">
-                <div className={`queue-title-text ${isActive ? 'active' : ''}`}>
-                  {index + 1}. {videoInfo ? videoInfo.time.split('T')[0] : 'Loading...'}
-                </div>
-                {videoInfo && queueWidth >= 200 && (
-                  <>
-                    <div className="queue-meta">
-                      <b>Site:</b> {videoInfo.site}
-                    </div>
-                    <div className="queue-meta">
-                      <b>Animals:</b> {videoInfo.animals.join(', ') || 'None'}
-                    </div>
-                  </>
-                )}
+              <div className="seek-selector">
+                <label>Seek:</label>
+                <select value={seekTime} onChange={(e) => setSeekTime(Number(e.target.value))}>
+                  <option value={5}>5s</option>
+                  <option value={10}>10s</option>
+                  <option value={15}>15s</option>
+                  <option value={30}>30s</option>
+                </select>
               </div>
             </div>
-          );
-        })}
+
+            {/* Info section */}
+            <div className="info-section">
+              <div className="player-details">
+                <h3>Video Details</h3>
+                <div className="video-details">
+                  <div><strong>Path:</strong> {currentItem.path}</div>
+                  <div><strong>Date:</strong> {currentItem.time }</div>
+                  <div><strong>Site:</strong> {currentItem.site || 'N/A'}</div>
+                  {currentItem.animals?.length > 0 && (
+                    <div><strong>Animals:</strong> {currentItem.animals.join(', ')}</div>
+                  )}
+                  {currentItem.actions?.length > 0 && (
+                    <div><strong>Actions:</strong> {currentItem.actions.join(', ')}</div>
+                  )}
+                  {currentItem.add_labels?.length > 0 && (
+                    <div><strong>Additional:</strong> {currentItem.add_labels.join(', ')}</div>
+                  )}
+                </div>
+                <div className="keyboard-shortcuts">
+                  <b>Keyboard Shortcuts:</b>
+                  Space: Play/Pause | ←/→: Seek | ↑/↓: Prev/Next | Q: Toggle Queue
+                </div>
+              </div>
+
+              {/* Playback options */}
+              <div className="playback-options">
+                <h4>Playback Options</h4>
+                <div className="option-group">
+                  <label className="radio-option">
+                    <input
+                      type="radio"
+                      value="single play"
+                      checked={playbackMode === 'single'}
+                      onChange={(e) => setPlaybackMode(e.target.value)}
+                    />
+                    <span>Single Video</span>
+                  </label>
+                  <label className="radio-option">
+                    <input
+                      type="radio"
+                      value="move to next"
+                      checked={playbackMode === 'continuous'}
+                      onChange={(e) => setPlaybackMode(e.target.value)}
+                    />
+                    <span>Continuous</span>
+                  </label>
+                  <label className="radio-option">
+                    <input
+                      type="radio"
+                      value="repeat video"
+                      checked={playbackMode === 'repeat'}
+                      onChange={(e) => setPlaybackMode(e.target.value)}
+                    />
+                    <span>Loop Current</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="no-video-message">
+            <h2>No videos in queue</h2>
+            <p>Select videos from the main page to play them here.</p>
+          </div>
+        )}
       </div>
+
+      {/* Queue sidebar */}
+      {!isQueueCollapsed && (
+        <>
+          <div 
+            className="queue-divider"
+            style={{ right: queueWidth + 'px' }}
+            onMouseDown={handleDividerMouseDown}
+          />
+          <div className="queue-sidebar" style={{ width: isMobile ? '100%' : queueWidth + 'px' }}>
+            <h3 className="queue-title">
+              <span>Queue ({queue.length})</span>
+              {isMobile && (
+                <button 
+                  className="queue-collapse-btn"
+                  onClick={() => setIsQueueCollapsed(!isQueueCollapsed)}
+                >
+                  {isQueueCollapsed ? '▼' : '▲'}
+                </button>
+              )}
+            </h3>
+            {(!isMobile || !isQueueCollapsed) && (
+              <div className="queue-list">
+              {queue.map((item, idx) => (
+                <div
+                  key={item.path}
+                  data-q-idx={idx}
+                  className={`queue-item ${idx === currentIndex ? 'active' : ''}`}
+                  onClick={() => handleSelectVideo(idx)}
+                >
+                  <div className="queue-thumbnail">
+                    <video 
+                      src={buildVideoUrl(item.path)}
+                      muted
+                      preload="metadata"
+                      onError={() => console.log(`Thumbnail failed for: ${item.path}`)}
+                    />
+                    <div className="queue-number">{idx + 1}</div>
+                  </div>
+                  <div className="queue-info">
+                    <div className="queue-meta">{item.site || 'Unknown Site'}</div>
+                    {item.animals?.length > 0 && (
+                      <div className="queue-meta">{item.animals.join(', ')}</div>
+                    )}
+                    {item.actions?.length > 0 && (
+                      <div className="queue-meta">{item.actions.join(', ')}</div>
+                    )}
+                    {item.date && (
+                      <div className="queue-meta">{item.date}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Queue toggle button - desktop only */}
+      {!isMobile && (
+        <button
+          className="queue-toggle"
+          style={{ right: isQueueCollapsed ? 0 : queueWidth + 'px' }}
+          onClick={() => setIsQueueCollapsed(!isQueueCollapsed)}
+        >
+          {isQueueCollapsed ? '◀' : '▶'}
+        </button>
+      )}
     </div>
   );
 }

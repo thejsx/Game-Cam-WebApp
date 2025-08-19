@@ -67,7 +67,6 @@ Use this to narrow down to seasons or specific trips.
 As you change any of these, the Videos (N) panel updates automatically. Items not available under the current selection can appear grayed to indicate they won’t produce results unless you adjust other filters.
 
 Browsing and opening videos
-Videos (N):
 
 Shows the number of videos found and lists them in date order.
 
@@ -86,7 +85,6 @@ Embedded video with standard controls (play/pause, timeline scrubbing, volume, f
 
 Description below the video shows a concise summary, for example:
 
-yaml
 Copy
 2024-11-05 | Cabin Creek | elk | grazing | dusk
 (Date | Site | Animals | Actions | Additional labels)
@@ -113,7 +111,6 @@ This is useful for removing private or sensitive footage from routine browsing.
 If you don’t see a clip you expect, toggle restricted mode off to confirm whether the video is marked as restricted.
 
 Practical examples
-“Only elk at Site A last fall”
 
 Click Site A on the map (or select it in Cam Sites).
 
