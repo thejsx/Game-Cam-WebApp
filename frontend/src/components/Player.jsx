@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import '../styles/Player.css';
 import { buildVideoUrl } from '../api.js';
+import useIsMobile from '../useIsMobile';
 
 
 
@@ -13,23 +14,9 @@ export default function Player() {
   const [queueWidth, setQueueWidth] = useState(300);
   const [playbackMode, setPlaybackMode] = useState('continuous');
   const [seekTime, setSeekTime] = useState(5);
-  // Default to false for SSR, will be updated on client-side
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile(820); // Use consistent breakpoint
   const videoRef = useRef(null);
   const isDraggingRef = useRef(false);
-
-  // Check for mobile on mount - safe for SSR
-  useEffect(() => {
-    // Guard against SSR where window doesn't exist
-    if (typeof window === 'undefined') return;
-    
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Load videos from localStorage (set by App.jsx)
   useEffect(() => {
@@ -128,7 +115,8 @@ export default function Player() {
       setCurrentIndex(currentIndex + 1);
     }
     else if (playbackMode === 'repeat') {
-      videoRef.current.currentTime = 0; // Loop current video
+      videoRef.current.currentTime = 0;
+      videoRef.current.play(); // Restart and play the video
     }
     else if (playbackMode === 'single') {
       videoRef.current.pause(); // Just pause
@@ -289,29 +277,32 @@ export default function Player() {
                   <label className="radio-option">
                     <input
                       type="radio"
-                      value="single play"
+                      name="playbackMode"
+                      value="single"
                       checked={playbackMode === 'single'}
                       onChange={(e) => setPlaybackMode(e.target.value)}
                     />
-                    <span>Single Video</span>
+                    <span>Play Once</span>
                   </label>
                   <label className="radio-option">
                     <input
                       type="radio"
-                      value="move to next"
+                      name="playbackMode"
+                      value="continuous"
                       checked={playbackMode === 'continuous'}
                       onChange={(e) => setPlaybackMode(e.target.value)}
                     />
-                    <span>Continuous</span>
+                    <span>Play All</span>
                   </label>
                   <label className="radio-option">
                     <input
                       type="radio"
-                      value="repeat video"
+                      name="playbackMode"
+                      value="repeat"
                       checked={playbackMode === 'repeat'}
                       onChange={(e) => setPlaybackMode(e.target.value)}
                     />
-                    <span>Loop Current</span>
+                    <span>Repeat Video</span>
                   </label>
                 </div>
               </div>

@@ -9,23 +9,10 @@ import Login from "./components/Login";
 import "./styles/App.css";
 import "./styles/ResizableMobileLayout.css"; // Ensure styles are imported
 import useGlobalStore from "../GlobalStore";
+import useIsMobile from "./useIsMobile";
 
 // Global configuration
 const MAX_VIDEOS_LIMIT = 200; // Configurable limit for video playback
-
-// helper (inline)
-function useMedia(query) {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
-  );
-  useEffect(() => {
-    const mql = window.matchMedia(query);
-    const onChange = () => setMatches(mql.matches);
-    mql.addEventListener('change', onChange);
-    return () => mql.removeEventListener('change', onChange);
-  }, [query]);
-  return matches;
-}
 
 // Main App component
 
@@ -43,7 +30,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState(null);
   const isDragging = useRef(false);
-  const isMobile = useMedia('(max-width: 900px)'); // Use custom hook for media queries
+  const isMobile = useIsMobile(820); // Use consistent breakpoint
 
   // Check for existing token on mount
   useEffect(() => {

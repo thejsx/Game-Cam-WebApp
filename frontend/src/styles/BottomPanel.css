@@ -422,5 +422,32 @@
   flex-shrink: 0;
 }
 
+/* Back to top button styling for mobile */
+.back-to-top-container {
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.back-to-top-button {
+  padding: 10px 24px;
+  background-color: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.back-to-top-button:hover {
+  background-color: #005a9e;
+}
+
+.back-to-top-button:active {
+  background-color: #004080;
+}
+
 
 

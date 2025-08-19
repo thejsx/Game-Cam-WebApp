@@ -22,7 +22,7 @@ function BottomPanel({ allItems, updateSelected, onOpenPlayer }) {
   const selectedSettings = useGlobalStore(s => s.selectedSettings);
   const videos           = useGlobalStore(s => s.videos);
   const reverseSettings  = useGlobalStore(s => s.reverseSettings);
-  const isMobile = useIsMobile();
+  const isMobile = useIsMobile(820); // Use consistent breakpoint
 
   const categories = {
     sites: 'Cam Sites',
@@ -43,6 +43,7 @@ function BottomPanel({ allItems, updateSelected, onOpenPlayer }) {
 
   // For mobile: measure widest list and apply a shared width to all lists (shrink-wrap to widest)
   const filtersScrollerRef = useRef(null);
+  const videosRef = useRef(null);
   useLayoutEffect(() => {
     if (!isMobile || !filtersScrollerRef.current) return;
     const container = filtersScrollerRef.current;
@@ -148,11 +149,11 @@ function BottomPanel({ allItems, updateSelected, onOpenPlayer }) {
         <>
           {/* HINT ABOVE VIDEOS ON MOBILE */}
           <div className="mobile-filter-hint">
-            Scroll down to filter options to narrow down the video list
+            Scroll down and select filter options to narrow down the Videos list
           </div>
 
           {/* VIDEOS (top on mobile) */}
-          <div className="mobile-row">
+          <div className="mobile-row" ref={videosRef}>
             <div className="mobile-controls">
               <div className="mobile-title">Videos ({videos ? Object.keys(videos).length : 0})</div>
               {videos && Object.keys(videos).length > 0 && (
@@ -285,6 +286,20 @@ function BottomPanel({ allItems, updateSelected, onOpenPlayer }) {
             </div>
 
             <div className="vertical-spacer" />
+          </div>
+          
+          {/* BACK TO TOP BUTTON */}
+          <div className="mobile-row back-to-top-container">
+            <button 
+              className="back-to-top-button"
+              onClick={() => {
+                if (videosRef.current) {
+                  videosRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+            >
+              Back to top
+            </button>
           </div>
         </>
       ) : (
