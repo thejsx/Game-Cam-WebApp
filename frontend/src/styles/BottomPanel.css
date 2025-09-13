@@ -390,10 +390,11 @@
 /* Desktop videos section */
 .bottom-panel.is-desktop .videos-section {
   min-width: 200px;
+  width: max-content; /* Shrink to content width */
   max-width: 500px;
   display: flex;
   flex-direction: column;
-  flex: 0 1 auto; /* Allow shrinking */
+  flex: 0 1 max-content; /* Shrink to content but allow compression */
   height: 100%;
   min-height: 0; /* Allow full shrinking */
 }
@@ -443,7 +444,9 @@
   flex: 1 1 auto; /* Grow and shrink to fill available space */
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Allow shrinking */
+  width: max-content; /* Shrink to content width */
+  min-width: 200px; /* Minimum width */
+  max-width: 100%; /* Don't exceed parent */
   min-height: 120px; /* Minimum height */
   overflow: hidden; /* Let child handle scrolling */
   position: relative;
@@ -480,21 +483,7 @@
   text-decoration: underline;
 }
 
-/* Virtual scroll container should fill parent */
-.virtual-scroll-container {
-  flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
-}
-
-/* Simple list for non-virtualized videos */
-.simple-video-list {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-}
+/* Video list container styles are now handled inline in the component */
 
 .video-actions {
   display: flex;
