@@ -39,23 +39,19 @@ export function resortAllData(videoLabels, sites, animals, actions, addLabels, d
         // Sites check
         if (!sitesSet.has(labels.site)) continue;
         
-        // Animals check - optimized with Set
+        // Animals check - optimized with Set (has explict none label)
         const videoAnimals = labels.animals || [];
         let okAnimals = false;
         
-        if (animalsSet.has('none') && videoAnimals.length === 0) {
-            okAnimals = true;
-        } else {
-            for (const a of videoAnimals) {
-                if (animalsSet.has(a)) {
-                    okAnimals = true;
-                    break;
-                }
+        for (const a of videoAnimals) {
+            if (animalsSet.has(a)) {
+                okAnimals = true;
+                break;
             }
         }
         if (!okAnimals) continue;
         
-        // Actions check - optimized with Set
+        // Actions check - optimized with Set (no explicit none label)
         const videoActions = labels.actions || [];
         let okActions = false;
         
@@ -71,7 +67,7 @@ export function resortAllData(videoLabels, sites, animals, actions, addLabels, d
         }
         if (!okActions) continue;
         
-        // Additional labels check - optimized with Set
+        // Additional labels check - optimized with Set (no explicit none label)
         const videoAddLabels = labels.additional_labels || [];
         let okAdd = false;
         
@@ -109,15 +105,11 @@ export function reverseSubset(videos, videoLabels) {
         
         if (lbl.site) sites.add(lbl.site);
         
-        // Handle animals
+        // Handle animals (has explict none label)
         const anims = lbl.animals || [];
-        if (anims.length === 0) {
-            animals.add('none');
-        } else {
-            anims.forEach(a => animals.add(a));
-        }
-        
-        // Handle actions
+        anims.forEach(a => animals.add(a));
+
+        // Handle actions (no explicit none label)
         const acts = lbl.actions || [];
         if (acts.length === 0) {
             actions.add('none');
@@ -125,7 +117,7 @@ export function reverseSubset(videos, videoLabels) {
             acts.forEach(ac => actions.add(ac));
         }
         
-        // Handle additional labels
+        // Handle additional labels (no explicit none label)
         const adds = lbl.additional_labels || [];
         if (adds.length === 0) {
             addLabels.add('none');

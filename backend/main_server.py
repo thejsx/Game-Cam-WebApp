@@ -73,7 +73,7 @@ def get_json_path():
         p = env.replace("~", str(Path.home()))
     else:
         if system == "windows":
-            p = r"C:\Users\jrsch\Documents\Visual Studio Code\Deer Score Prediction\yolov5\GameCamFiles\GameCamClassifierJSONs"
+            p = r"D:\Game cams\GameCamClassifiers.json"
         elif system == "linux":
             p = "/mnt/D"
 

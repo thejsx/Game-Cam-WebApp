@@ -72,7 +72,9 @@ export default function App() {
         start: d.start,
         end: d.end
       });
-      setVideos(sortedLabels);
+      
+      // Don't set videos directly - let updateFunctionImmediate handle it
+      // setVideos(sortedLabels);
 
       setReverseSettings({
         sites: Object.keys(d.sites) || [],
@@ -82,6 +84,10 @@ export default function App() {
       });
 
       setSites(d.sites || {});
+      
+      // Call updateFunctionImmediate to filter and sort videos immediately
+      setIsLoading(false);
+      useGlobalStore.getState().updateFunctionImmediate();
 
     }
     initializeData();

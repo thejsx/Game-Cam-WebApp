@@ -2,10 +2,28 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import '../styles/Player.css';
 import { buildVideoUrl } from '../api.js';
 import useIsMobile from '../useIsMobile';
+import { parseDt } from '../filterHelpers';
 
+// Format date as "January 15, 2024"
+function formatDate(dateStr) {
+  const date = parseDt(dateStr);
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
 
-
-
+// Format date and time as "January 15, 2024 3:45 p.m."
+function formatDateTime(dateStr) {
+  const date = parseDt(dateStr);
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
+  hours = hours % 12 || 12;
+  const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()} ${hours}:${minutesStr} ${ampm}`;
+}
 
 export default function Player() {
   const [queue, setQueue] = useState([]);
@@ -251,18 +269,11 @@ export default function Player() {
               <div className="player-details">
                 <h3>Video Details</h3>
                 <div className="video-details">
-                  <div><strong>Path:</strong> {currentItem.path}</div>
-                  <div><strong>Date:</strong> {currentItem.time }</div>
+                  <div><strong>Date:</strong> {formatDateTime(currentItem.time)}</div>
                   <div><strong>Site:</strong> {currentItem.site || 'N/A'}</div>
-                  {currentItem.animals?.length > 0 && (
-                    <div><strong>Animals:</strong> {currentItem.animals.join(', ')}</div>
-                  )}
-                  {currentItem.actions?.length > 0 && (
-                    <div><strong>Actions:</strong> {currentItem.actions.join(', ')}</div>
-                  )}
-                  {currentItem.add_labels?.length > 0 && (
-                    <div><strong>Additional:</strong> {currentItem.add_labels.join(', ')}</div>
-                  )}
+                  <div><strong>Animals:</strong> {currentItem.animals?.length > 0 ? currentItem.animals.join(', ') : 'none'}</div>
+                  <div><strong>Actions:</strong> {currentItem.actions?.length > 0 ? currentItem.actions.join(', ') : 'none'}</div>
+                  <div><strong>Additional Labels:</strong> {currentItem.additional_labels?.length > 0 ? currentItem.additional_labels.join(', ') : 'none'}</div>
                 </div>
                 <div className="keyboard-shortcuts">
                   <b>Keyboard Shortcuts:</b>
@@ -359,12 +370,7 @@ export default function Player() {
                     {item.animals?.length > 0 && (
                       <div className="queue-meta">{item.animals.join(', ')}</div>
                     )}
-                    {item.actions?.length > 0 && (
-                      <div className="queue-meta">{item.actions.join(', ')}</div>
-                    )}
-                    {item.date && (
-                      <div className="queue-meta">{item.date}</div>
-                    )}
+                    <div className="queue-meta">{formatDate(item.time)}</div>
                   </div>
                 </div>
               ))}
