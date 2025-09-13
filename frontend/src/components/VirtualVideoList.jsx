@@ -27,6 +27,13 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
         setScrollTop(e.target.scrollTop);
     }, []);
     
+    // Initialize scroll position for proper rendering
+    useEffect(() => {
+        if (scrollContainerRef.current && totalItems > 0) {
+            setScrollTop(scrollContainerRef.current.scrollTop || 0);
+        }
+    }, [totalItems]);
+    
     const handleToggle = useCallback((vid) => {
         setCheckedVideos(prev => 
             prev.includes(vid) 
@@ -51,14 +58,18 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
     // If less than 100 videos, don't use virtualization
     if (totalItems < 100) {
         return (
-            <>
+            <div style={{
+                height: '100%',
+                overflowY: 'auto',
+                overflowX: 'hidden'
+            }}>
                 {videoEntries.map(([vid, info], index) => {
                     const date = info ? info.time.split('T')[0] : '';
                     const site = info?.site || '';
                     const displayName = `${index + 1}. ${date}  ${site}`;
                     
                     return (
-                        <div key={vid} className="video-item">
+                        <div key={vid} className="video-item" style={{ height: 'auto' }}>
                             <label>
                                 <input 
                                     type="checkbox" 
@@ -76,7 +87,7 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
                         </div>
                     );
                 })}
-            </>
+            </div>
         );
     }
     
@@ -90,7 +101,9 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
                 height: '100%',
                 overflowY: 'auto',
                 position: 'relative',
-                minHeight: '120px'
+                minHeight: '120px',
+                display: 'flex',
+                flexDirection: 'column'
             } : { 
                 height: `${containerHeight}px`, 
                 overflowY: 'auto',
