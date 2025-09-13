@@ -7,6 +7,7 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
     const scrollContainerRef = useRef(null);
     const [scrollTop, setScrollTop] = useState(0);
     const [containerHeight, setContainerHeight] = useState(height || 300);
+    const [useFlexHeight, setUseFlexHeight] = useState(!height);
     
     const videoEntries = Object.entries(videos);
     const totalItems = videoEntries.length;
@@ -35,7 +36,12 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
     }, [setCheckedVideos]);
     
     useEffect(() => {
-        setContainerHeight(height || 300);
+        if (height) {
+            setContainerHeight(height);
+            setUseFlexHeight(false);
+        } else {
+            setUseFlexHeight(true);
+        }
     }, [height]);
     
     if (totalItems === 0) {
@@ -48,7 +54,8 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
             <>
                 {videoEntries.map(([vid, info], index) => {
                     const date = info ? info.time.split('T')[0] : '';
-                    const displayName = `${index + 1}. ${date}`;
+                    const site = info?.site || '';
+                    const displayName = `${index + 1}. ${date}  ${site}`;
                     
                     return (
                         <div key={vid} className="video-item">
@@ -79,7 +86,12 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
             ref={scrollContainerRef}
             className="virtual-scroll-container"
             onScroll={handleScroll}
-            style={{ 
+            style={useFlexHeight ? {
+                height: '100%',
+                overflowY: 'auto',
+                position: 'relative',
+                minHeight: '120px'
+            } : { 
                 height: `${containerHeight}px`, 
                 overflowY: 'auto',
                 position: 'relative'
@@ -90,7 +102,8 @@ const VirtualVideoList = memo(({ videos, checkedVideos, setCheckedVideos, onOpen
                     {visibleItems.map(([vid, info], i) => {
                         const index = startIndex + i;
                         const date = info ? info.time.split('T')[0] : '';
-                        const displayName = `${index + 1}. ${date}`;
+                        const site = info?.site || '';
+                        const displayName = `${index + 1}. ${date} ${site}`;
                         
                         return (
                             <div 
