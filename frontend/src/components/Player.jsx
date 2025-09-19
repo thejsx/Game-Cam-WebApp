@@ -31,7 +31,7 @@ export default function Player() {
   const [isQueueCollapsed, setIsQueueCollapsed] = useState(false);
   const [queueWidth, setQueueWidth] = useState(300);
   const [playbackMode, setPlaybackMode] = useState('continuous');
-  const [seekTime, setSeekTime] = useState(5);
+  const [seekTime, setSeekTime] = useState(3);
   const isMobile = useIsMobile(820); // Use consistent breakpoint
   const videoRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -103,12 +103,18 @@ export default function Player() {
   const handlePrevious = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
+    } else if (queue.length > 0) {
+      // Wrap to last video
+      setCurrentIndex(queue.length - 1);
     }
   };
 
   const handleNext = () => {
     if (currentIndex < queue.length - 1) {
       setCurrentIndex(currentIndex + 1);
+    } else if (queue.length > 0) {
+      // Wrap to first video
+      setCurrentIndex(0);
     }
   };
 
@@ -240,7 +246,7 @@ export default function Player() {
 
             {/* Player controls */}
             <div className="player-controls">
-              <button className="control-button" onClick={handlePrevious} disabled={currentIndex === 0}>
+              <button className="control-button" onClick={handlePrevious}>
                 Previous
               </button>
               <button className="control-button" onClick={handleSeekBackward}>
@@ -249,17 +255,23 @@ export default function Player() {
               <button className="control-button" onClick={handleSeekForward}>
                 {seekTime}s →
               </button>
-              <button className="control-button" onClick={handleNext} disabled={currentIndex === queue.length - 1}>
+              <button className="control-button" onClick={handleNext}>
                 Next
               </button>
               
               <div className="seek-selector">
                 <label>Seek:</label>
                 <select value={seekTime} onChange={(e) => setSeekTime(Number(e.target.value))}>
+                  <option value={1}>1s</option>
+                  <option value={2}>2s</option>
+                  <option value={3}>3s</option>
+                  <option value={4}>4s</option>
                   <option value={5}>5s</option>
+                  <option value={6}>6s</option>
+                  <option value={7}>7s</option>
+                  <option value={8}>8s</option>
+                  <option value={9}>9s</option>
                   <option value={10}>10s</option>
-                  <option value={15}>15s</option>
-                  <option value={30}>30s</option>
                 </select>
               </div>
             </div>
@@ -267,7 +279,7 @@ export default function Player() {
             {/* Info section */}
             <div className="info-section">
               <div className="player-details">
-                <h3>Video Details</h3>
+                <h3>Video {currentIndex + 1} of {queue.length}</h3>
                 <div className="video-details">
                   <div><strong>Date:</strong> {formatDateTime(currentItem.time)}</div>
                   <div><strong>Site:</strong> {currentItem.site || 'N/A'}</div>
