@@ -32,9 +32,16 @@ export default function Player() {
   const [queueWidth, setQueueWidth] = useState(300);
   const [playbackMode, setPlaybackMode] = useState('continuous');
   const [seekTime, setSeekTime] = useState(3);
+  const [queueHeight, setQueueHeight] = useState(175); // Default height in pixels
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const isMobile = useIsMobile(820); // Use consistent breakpoint
   const videoRef = useRef(null);
+  const videoContainerRef = useRef(null);
   const isDraggingRef = useRef(false);
+  const queueRef = useRef(null);
+  const isDraggingQueueRef = useRef(false);
+  const dragStartYRef = useRef(0);
+  const startOffsetRef = useRef(0);
 
   // Load videos from localStorage (set by App.jsx)
   useEffect(() => {
@@ -180,6 +187,78 @@ export default function Player() {
     };
   }, []);
 
+  // Handle mobile queue dragging
+  const handleQueueTouchStart = (e) => {
+    if (!isMobile) return;
+    isDraggingQueueRef.current = true;
+    dragStartYRef.current = e.touches[0].clientY;
+    startOffsetRef.current = queueHeight;
+  };
+
+  const handleQueueTouchMove = (e) => {
+    if (!isDraggingQueueRef.current || !isMobile) return;
+    const deltaY = dragStartYRef.current - e.touches[0].clientY;
+    // Calculate new height based on drag (min 100px, max 60vh)
+    const maxHeight = window.innerHeight * 0.6;
+    const newHeight = Math.max(100, Math.min(maxHeight, startOffsetRef.current + deltaY));
+    setQueueHeight(newHeight);
+  };
+
+  const handleQueueTouchEnd = () => {
+    isDraggingQueueRef.current = false;
+  };
+
+  // Track fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Override video fullscreen to use container instead
+  useEffect(() => {
+    const video = videoRef.current;
+    const container = videoContainerRef.current;
+    if (!video || !container) return;
+
+    const handleDblClick = (e) => {
+      e.preventDefault();
+      if (!document.fullscreenElement) {
+        container.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    };
+
+    video.addEventListener('dblclick', handleDblClick);
+    
+    // Intercept fullscreen request from video controls
+    const originalRequestFullscreen = video.requestFullscreen;
+    video.requestFullscreen = function() {
+      if (container.requestFullscreen) {
+        return container.requestFullscreen();
+      }
+      return originalRequestFullscreen.call(this);
+    };
+
+    return () => {
+      video.removeEventListener('dblclick', handleDblClick);
+      video.requestFullscreen = originalRequestFullscreen;
+    };
+  }, [currentItem]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeydown = (e) => {
@@ -228,21 +307,49 @@ export default function Player() {
   return (
     <div className="player-container">
       {/* Main video area */}
-      <div className="player-main" style={{ marginRight: isQueueCollapsed ? 0 : queueWidth + 'px' }}>
+      <div 
+        className={`player-main ${isMobile && isQueueCollapsed ? 'mobile-expanded' : ''}`} 
+        style={{ 
+          marginRight: !isMobile && !isQueueCollapsed ? queueWidth + 'px' : 0,
+          height: isMobile && !isQueueCollapsed ? `calc(100vh - 40vh - ${queueHeight}px)` : 'auto'
+        }}
+      >
         {currentItem ? (
           <>
-            <video
-              ref={videoRef}
-              key={currentItem.path}
-              src={videoUrl}
-              controls
-              autoPlay
-              className="player-video"
-              onEnded={handleVideoEnd}
-              onError={(e) => {
-                console.error('Video failed to load:', e?.currentTarget?.src);
-              }}
-            />
+            <div ref={videoContainerRef} className={`video-container ${isFullscreen ? 'fullscreen' : ''}`}>
+              <video
+                ref={videoRef}
+                key={currentItem.path}
+                src={videoUrl}
+                controls
+                autoPlay
+                className="player-video"
+                playsInline
+                webkit-playsinline
+                onEnded={handleVideoEnd}
+                onError={(e) => {
+                  console.error('Video failed to load:', e?.currentTarget?.src);
+                }}
+              />
+              {isFullscreen && (
+                <div className="fullscreen-nav-overlay">
+                  <button 
+                    className="fullscreen-nav-btn prev"
+                    onClick={handlePrevious}
+                    aria-label="Previous video"
+                  >
+                    ← Previous
+                  </button>
+                  <button 
+                    className="fullscreen-nav-btn next"
+                    onClick={handleNext}
+                    aria-label="Next video"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Player controls */}
             <div className="player-controls">
@@ -277,7 +384,7 @@ export default function Player() {
             </div>
 
             {/* Info section */}
-            <div className={`info-section ${isMobile ? 'mobile' : ''}`}>
+            <div className={`info-section ${isMobile ? 'mobile' : ''} ${isMobile && isQueueCollapsed ? 'expanded' : ''}`}>
               <div className="player-details">
                 <h3>Video {currentIndex + 1} of {queue.length}</h3>
                 <div className="details-wrapper">
@@ -345,26 +452,47 @@ export default function Player() {
         )}
       </div>
 
-      {/* Queue sidebar */}
-      {!isQueueCollapsed && (
+      {/* Queue sidebar - desktop always renders, mobile only when not collapsed */}
+      {(isMobile ? !isQueueCollapsed : true) && (
         <>
+          {!isMobile && !isQueueCollapsed && (
+            <div 
+              className="queue-divider"
+              style={{ right: queueWidth + 'px' }}
+              onMouseDown={handleDividerMouseDown}
+            />
+          )}
           <div 
-            className="queue-divider"
-            style={{ right: queueWidth + 'px' }}
-            onMouseDown={handleDividerMouseDown}
-          />
-          <div className="queue-sidebar" style={{ width: isMobile ? '100%' : queueWidth + 'px' }}>
-            <h3 className="queue-title">
+            ref={queueRef}
+            className={`queue-sidebar ${isMobile ? 'mobile-draggable' : ''} ${!isMobile && isQueueCollapsed ? 'collapsed' : ''}`} 
+            style={{ 
+              width: isMobile ? '100%' : isQueueCollapsed ? '0' : queueWidth + 'px',
+              height: !isMobile ? 'auto' : isQueueCollapsed ? '0' : `${queueHeight}px`
+            }}
+          >
+
+            <h2 className="queue-title">
               <span>Queue ({queue.length})</span>
               {isMobile && (
+                <div 
+                  className="queue-drag-handle"
+                  onTouchStart={handleQueueTouchStart}
+                  onTouchMove={handleQueueTouchMove}
+                  onTouchEnd={handleQueueTouchEnd}
+                >
+                  <div className="drag-indicator"></div>
+                </div>
+              )}
+              {isMobile && (
+                
                 <button 
                   className="queue-collapse-btn"
                   onClick={() => setIsQueueCollapsed(!isQueueCollapsed)}
                 >
-                  {isQueueCollapsed ? '▼' : '▲'}
+                  ▼
                 </button>
               )}
-            </h3>
+            </h2>
             {(!isMobile || !isQueueCollapsed) && (
               <div className="queue-list">
               {queue.map((item, idx) => (
@@ -398,14 +526,26 @@ export default function Player() {
         </>
       )}
 
-      {/* Queue toggle button - desktop only */}
-      {!isMobile && (
+      {/* Queue toggle button */}
+      {(!isMobile && (
         <button
           className="queue-toggle"
           style={{ right: isQueueCollapsed ? 0 : queueWidth + 'px' }}
           onClick={() => setIsQueueCollapsed(!isQueueCollapsed)}
         >
           {isQueueCollapsed ? '◀' : '▶'}
+        </button>
+      ))}
+      
+      {/* Mobile queue reopen button when collapsed */}
+      {isMobile && isQueueCollapsed && (
+        <button
+          className="mobile-queue-reopen"
+          onClick={() => setIsQueueCollapsed(false)}
+          aria-label="Open queue"
+        >
+          <div className="reopen-arrow">↑</div>
+          <div className="reopen-text">Queue ({queue.length})</div>
         </button>
       )}
     </div>

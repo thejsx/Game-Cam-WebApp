@@ -13,14 +13,96 @@
   flex-direction: column;
   transition: margin-right 0.3s ease;
   overflow: hidden;
+  height: 100%;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 70%;
+  max-height: 60vh;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-container.fullscreen {
+  height: 100vh;
+  max-height: 100vh;
 }
 
 .player-video {
   width: 100%;
-  height: 70%;
-  max-height: 70vh;
-  background-color: #000;
+  height: 100%;
   object-fit: contain;
+}
+
+/* Fullscreen navigation overlay */
+.fullscreen-nav-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2; /* Max z-index to ensure visibility */
+}
+
+.fullscreen-nav-btn {
+  position: absolute;
+  bottom: 50px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 15px 30px;
+  font-size: 18px;
+  font-weight: 500;
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 8px;
+  transition: opacity 0.3s, background 0.2s, transform 0.1s;
+  z-index: 3;
+}
+
+.fullscreen-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.05);
+}
+
+.fullscreen-nav-btn:active {
+  transform: scale(0.95);
+}
+
+.fullscreen-nav-btn.prev {
+  left: calc(50% - 100px);
+}
+
+.fullscreen-nav-btn.next {
+  right: calc(50% - 100px);
+}
+
+/* Make sure the container can go fullscreen */
+.video-container:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+.video-container:-moz-full-screen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+.video-container:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+/* Ensure buttons show in fullscreen */
+.video-container:fullscreen .fullscreen-nav-overlay,
+.video-container:-webkit-full-screen .fullscreen-nav-overlay,
+.video-container:-moz-full-screen .fullscreen-nav-overlay {
+  display: block;
 }
 
 .player-controls {
@@ -74,6 +156,11 @@
   gap: 15px;
   margin-top: 10px;
   flex-wrap: wrap;
+  flex: 1;
+  min-height: 0;
+  overflow: scroll;
+  height: auto;
+
 }
 
 /* Mobile layout adjustments - CSS fallback for when JS mobile detection fails */
@@ -81,8 +168,9 @@
   .player-container {
     flex-direction: column;
     height: 100vh;
-    overflow-y: auto;
-    gap: 0; /* Remove gap between sections */
+    overflow: hidden;
+    position: relative;
+    gap: 0;
   }
   
   /* CSS-only mobile queue toggle fallback */
@@ -91,21 +179,34 @@
   }
   
   .queue-collapse-btn {
-    display: inline-block; /* Ensure mobile button shows */
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 12px;
   }
 
   .player-main {
     margin-right: 0 !important;
     padding: 5px;
-    height: auto;
-    flex: 1;
     display: flex;
     flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* When queue is collapsed, expand main content to fill screen */
+  .player-main.mobile-expanded {
+    height: calc(60vh - 60px) !important; /* Full remaining height minus reopen button */
+    overflow-y: auto;
   }
 
-  .player-video {
+  .video-container {
     height: 40vh;
-    max-height: 40vh;
+    max-height: 60vh;
+  }  
+  .player-video {
+    position: relative;
+    z-index: 1;
+    height: 100%;
   }
 
   .player-controls {
@@ -123,14 +224,35 @@
     flex-direction: row;
     gap: 10px;
     margin-top: 5px;
-    margin-bottom: 0; /* Remove bottom margin */
-    align-items: flex-start;
+    margin-bottom: 0;
+    align-items: stretch;
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    overflow: hidden;
+  }
+  
+  /* When queue is collapsed, expand info section to fill available space */
+  .info-section.mobile.expanded {
+    flex: 1;
+    height: 100%;
   }
 
   .player-details {
     flex: 1;
     padding: 8px;
     font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 175px;
+  }
+  
+  /* When queue is collapsed, expand player details */
+  .mobile-expanded .player-details {
+    flex: 1;
+    overflow-y: auto;
+    max-height: fit-content;
   }
 
   .player-details h3 {
@@ -150,7 +272,12 @@
     flex: 0 0 auto;
     padding: 8px;
     min-width: fit-content;
-    margin-bottom: 0; /* Remove bottom margin */
+    margin-bottom: 0;
+  }
+  
+  /* When queue is collapsed, adjust playback options */
+  .mobile-expanded .playback-options {
+    flex-shrink: 0;
   }
 
   .playback-options h4 {
@@ -168,32 +295,76 @@
     font-size: 12px;
   }
 
-  /* Queue at bottom */
+  /* Queue at bottom - draggable in mobile */
   .queue-sidebar {
-    position: static !important;
+    position: fixed !important;
     width: 100% !important;
-    height: auto;
-    min-height: auto;
-    max-height: 250px;
+    min-height: 80px;
+    max-height: 60vh;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
     top: auto !important;
-    right: auto !important;
-    bottom: auto !important;
     border-top: 2px solid #ddd;
     border-left: none !important;
-    overflow-y: auto;
+    overflow-y: hidden;
     flex-shrink: 0;
-    padding: 10px;
+    padding: 0;
+    padding-top: 15px; /* Smaller space for drag handle */
     background-color: #f9f9f9;
     margin: 0;
-    margin-top: 0; /* Remove top margin */
     box-sizing: border-box;
+    transition: height 0.2s ease-out;
+    z-index: 100;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
   }
 
   .queue-sidebar.collapsed {
-    height: auto !important;
-    min-height: auto !important;
-    overflow: hidden;
+    display: none !important;
   }
+  
+  .queue-sidebar.mobile-draggable {
+    touch-action: none; /* Allow custom touch handling */
+  }
+  
+  /* Mobile drag handle */
+  .queue-drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 5px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ns-resize;
+    touch-action: none;
+    z-index: 101;
+  }
+  
+  .queue-drag-handle:active {
+    cursor: grabbing;
+  }
+  
+  .drag-indicator {
+    width: 50px;
+    height: 4px;
+    background: #bbb;
+    border-radius: 2px;
+  }
+  
+  .queue-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0px 10px;
+    max-height: calc(100% - 35px); /* Account for smaller title */
+  }
+  
+
 
   .queue-divider {
     display: none; /* No dragging on mobile */
@@ -268,13 +439,6 @@
     flex: 1;
   }
 
-  .queue-title {
-    font-size: 16px;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #ddd;
-  }
-
   .seek-selector {
     margin: 4px;
   }
@@ -297,7 +461,8 @@
   background-color: #f9f9f9;
   border-radius: 8px;
   overflow-y: auto;
-  max-height: 200px;
+  min-height: 0;
+  max-height: auto; /* Limit height in desktop to prevent cutoff */
 }
 
 .player-details h3 {
@@ -394,7 +559,7 @@
   top: 0;
   bottom: 0;
   border-left: 1px solid #ddd;
-  padding: 10px;
+  padding: 0px 10px;
   overflow-y: auto;
   background-color: #fff;
   transition: width 0.3s ease;
@@ -408,14 +573,15 @@
 }
 
 .queue-title {
-  margin-top: 0;
-  margin-bottom: 15px;
+  margin: 0px;
+  padding: 0px 5px;
+  font-size: 16px;
   transition: all 0.3s ease;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 16px;
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
 }
@@ -530,8 +696,7 @@
 }
 
 .queue-title-text {
-  font-size: 14px;
-  margin-bottom: 4px;
+  font-size: 12px;
   font-weight: normal;
   color: #000;
 }
@@ -619,47 +784,62 @@
   white-space: nowrap;
 }
 
-/* Mobile fullscreen navigation overlay */
-.mobile-fullscreen-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 9999;
+/* Desktop: hide drag handle */
+@media (min-width: 769px) {
+  .queue-drag-handle {
+    display: none;
+  }
 }
 
-.mobile-fullscreen-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(0, 0, 0, 0.7);
+/* Mobile specific: ensure drag handle is visible */
+@media (max-width: 768px) {
+  .queue-drag-handle {
+    display: flex !important;
+  }
+}
+
+/* Mobile queue reopen button */
+.mobile-queue-reopen {
+  position: fixed;
+  bottom: 10px;
+  left: 65%;
+  background: #2196f3;
   color: white;
   border: none;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  font-size: 36px;
-  font-weight: bold;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  pointer-events: auto;
+  z-index: 99;
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background 0.2s, transform 0.2s;
 }
 
-.mobile-fullscreen-arrow:hover {
-  background: rgba(0, 0, 0, 0.9);
+.mobile-queue-reopen:hover {
+  background: #1976d2;
+  transform: translateX(-50%) translateY(-2px);
 }
 
-.mobile-fullscreen-left {
-  left: 20px;
+.mobile-queue-reopen:active {
+  transform: translateX(-50%) translateY(0);
 }
 
-.mobile-fullscreen-right {
-  right: 20px;
+.reopen-arrow {
+  font-size: 18px;
+  animation: bounce-up 1.5s infinite;
+}
+
+.reopen-text {
+  font-size: 14px;
+}
+
+@keyframes bounce-up {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 /* ===== Responsive Player Layout (Desktop-first) ===== */
