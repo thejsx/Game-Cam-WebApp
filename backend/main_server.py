@@ -127,6 +127,12 @@ def get_labels(request: Request, current_user: str = Depends(get_current_user)):
     # If no filters are provided, this is the initial load, return all entries
     if len(qp) == 0:
         print("No filters provided, returning all entries.")
+        # Add elevation data to all videos
+        elevations = {v['site']: v['elevation'] for v in data['sites'].values()}
+        for vid, labels in data['video_labels'].items():
+            site = labels.get('site')
+            if site in elevations:
+                data['video_labels'][vid]['elevation'] = elevations[site]
         return {
             "sites": {v['site']: v['gps'] for v in data['sites'].values()},
             "animals": ['none'] + [item for item in data['sorted_videos']['animal_videos'].keys() if item != 'none'],
@@ -136,7 +142,7 @@ def get_labels(request: Request, current_user: str = Depends(get_current_user)):
             # default to 1/1/2020
             "start": datetime(2020, 1, 1).date(),
             "end": datetime.now().date(),
-            "restricted": default_restricted,
+            "restricted": default_restricted
         }
     
     # Get filter parameters - empty lists mean no selection for that category

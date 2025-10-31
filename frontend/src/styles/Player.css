@@ -308,6 +308,28 @@
   line-height: 1.6;
 }
 
+/* Details wrapper for desktop layout */
+.details-wrapper {
+  display: flex;
+  gap: 20px;
+}
+
+/* Description section styling */
+.description-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Mobile-specific layout for info section */
+.info-section.mobile .details-wrapper {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.info-section.mobile .description-section {
+  min-width: unset;
+}
+
 .keyboard-shortcuts {
   margin-top: 10px;
   font-size: 12px;

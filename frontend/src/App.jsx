@@ -12,7 +12,7 @@ import useGlobalStore from "../GlobalStore";
 import useIsMobile from "./useIsMobile";
 
 // Global configuration
-const MAX_VIDEOS_LIMIT = 200; // Configurable limit for video playback
+const MAX_VIDEOS_LIMIT = 150; // Configurable limit for video playback
 
 // Main App component
 

@@ -277,15 +277,21 @@ export default function Player() {
             </div>
 
             {/* Info section */}
-            <div className="info-section">
+            <div className={`info-section ${isMobile ? 'mobile' : ''}`}>
               <div className="player-details">
                 <h3>Video {currentIndex + 1} of {queue.length}</h3>
-                <div className="video-details">
-                  <div><strong>Date:</strong> {formatDateTime(currentItem.time)}</div>
-                  <div><strong>Site:</strong> {currentItem.site || 'N/A'}</div>
-                  <div><strong>Animals:</strong> {currentItem.animals?.length > 0 ? currentItem.animals.join(', ') : 'none'}</div>
-                  <div><strong>Actions:</strong> {currentItem.actions?.length > 0 ? currentItem.actions.join(', ') : 'none'}</div>
-                  <div><strong>Additional Labels:</strong> {currentItem.additional_labels?.length > 0 ? currentItem.additional_labels.join(', ') : 'none'}</div>
+                <div className="details-wrapper">
+                  <div className="video-details">
+                    <div><strong>Date:</strong> {formatDateTime(currentItem.time)}</div>
+                    <div><strong>Site:</strong> {currentItem.site || 'N/A'}</div>
+                    <div><strong>Elevation:</strong> {`${currentItem.elevation} ft` || 'N/A'}</div>
+                    <div><strong>Animals:</strong> {currentItem.animals?.length > 0 ? currentItem.animals.join(', ') : 'none'}</div>
+                    <div><strong>Actions:</strong> {currentItem.actions?.length > 0 ? currentItem.actions.join(', ') : 'none'}</div>
+                    <div><strong>Additional Labels:</strong> {currentItem.additional_labels?.length > 0 ? currentItem.additional_labels.join(', ') : 'none'}</div>
+                  </div>
+                  <div className="description-section">
+                    <div><strong>Description:</strong> {currentItem.AI_description || 'none'}</div>
+                  </div>
                 </div>
                 <div className="keyboard-shortcuts">
                   <b>Keyboard Shortcuts:</b>
